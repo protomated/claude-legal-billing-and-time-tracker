@@ -141,5 +141,5 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
-/solo-attorney-starter-kit-*.zip
-/solo-attorney-starter-kit-*.zip.sha256
+*.zip
+*.zip.sha256

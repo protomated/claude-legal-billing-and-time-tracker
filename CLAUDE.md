@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A **Claude Desktop plugin** for solo attorneys — five skills (slash commands) that read local matter files and Gmail to draft legal documents. There is no runtime code, no MCP server, and no backend. The product is entirely content: markdown skill files, JSON manifests, and a Next.js landing page.
+A **Claude Desktop plugin** for solo attorneys — one skill (`/ai-use-policy`) that conducts a guided interview and drafts three compliance documents: an internal AI-use policy, a client-facing AI-disclosure clause for engagement letters, and a one-page safe AI checklist. There is no runtime code, no MCP server, and no backend. The product is entirely content: a markdown skill file, JSON manifests, and a Next.js landing page.
 
 ## Repo layout
 
 ```
 plugin/           The installable plugin (packaged into .zip bundle)
   .claude-plugin/plugin.json   Manifest validated by scripts/validate-plugin.mjs
-  .mcp.json                    Declares gmail + filesystem connector requirements
+  .mcp.json                    Declares filesystem connector requirement
   manifest.json                Plugin metadata (manifest_version, server entry)
   prompts/system-prompt.md     Master system prompt — ethical guardrails live here
   skills/*/SKILL.md            One directory per skill; YAML frontmatter + markdown body

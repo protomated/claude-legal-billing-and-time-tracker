@@ -1,25 +1,16 @@
 {
   "manifest_version": "0.2",
-  "name": "solo-attorney-starter-kit",
-  "display_name": "Solo Attorney Claude Starter Kit",
-  "version": "2.0.0",
-  "description": "6 pre-built AI skills for solo attorneys: intake summary, engagement letter, court deadline reasoning, meeting prep brief, billing narrative drafter, and new-matter organizer. Reads your local matter files, Gmail, and Google Calendar. All output requires attorney review before use.",
+  "name": "ai-use-policy-generator",
+  "display_name": "AI Use Policy Generator for Law Firms",
+  "version": "1.0.0",
+  "description": "One skill: /ai-use-policy. A short guided interview produces three ready-to-adopt documents: an internal AI-use policy, a client-facing AI-disclosure clause for engagement letters, and a one-page safe AI checklist. Flags consumer-grade tools that are touching client data and suggests safer alternatives. All output is a starting draft requiring attorney review and formal firm adoption.",
   "author": {
     "name": "Protomated",
     "url": "https://protomated.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/protomated/claude-solo-attorney-starter-kit"
+    "url": "https://github.com/protomated/claude-ai-use-policy-generator"
   },
-  "license": "MIT",
-  "server": {
-    "type": "node",
-    "entry_point": "server/index.js",
-    "mcp_config": {
-      "command": "node",
-      "args": ["${__dirname}/server/index.js"],
-      "env": {}
-    }
-  }
+  "license": "MIT"
 }
