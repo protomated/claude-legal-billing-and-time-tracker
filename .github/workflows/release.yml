@@ -22,7 +22,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - run: npm ci
-      
+
       - run: npm run build
 
       - name: Create GitHub Release
@@ -30,7 +30,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create ${{ github.ref_name }} \
-            solo-attorney-assistant-v${{ steps.version.outputs.VERSION }}.zip \
-            solo-attorney-assistant-v${{ steps.version.outputs.VERSION }}.zip.sha256 \
-            --title "Solo Attorney Assistant ${{ github.ref_name }}" \
-            --generate-notes
+            ai-use-policy-generator-v${{ steps.version.outputs.VERSION }}.zip \
+            ai-use-policy-generator-v${{ steps.version.outputs.VERSION }}.zip.sha256 \
+            --title "AI Use Policy Generator ${{ github.ref_name }}" \
+            --notes-file RELEASE.md

@@ -1,7 +1,7 @@
-# App - Solo Attorney Claude Plugin - Technical
+# AI Use Policy Generator — Technical
 
-**Product:** Solo Attorney Claude Plugin (Claude Desktop plugin)
-**Audience:** Solo attorneys using Claude Desktop
+**Product:** AI Use Policy Generator (Claude Desktop plugin)
+**Audience:** Solo and small-firm attorneys using Claude Desktop
 **Distribution model:** Free download (lead magnet) → consulting upsell ($3K–$6K)
 **Team size assumed:** 1 developer + 1 content/legal SME
 **Monthly infrastructure budget assumed:** $0 at MVP scale
@@ -89,7 +89,7 @@ Building our own MCP servers would require provisioning Google OAuth credentials
 
 **CI flow on tag push (`v1.0.0`, etc.):**
 1. Run `npm run validate` (`scripts/validate-plugin.mjs`) against `plugin.json`, `.mcp.json`, and all `SKILL.md` frontmatter
-2. Run `npm run pack` to produce `solo-attorney-starter-kit-v2.0.0.zip`
+2. Run `npm run pack` to produce `ai-use-policy-generator-v1.0.0.zip`
 3. Run `npm run checksum` to compute SHA-256
 4. Run `npm run deploy:artifact` to copy bundle to `site/public/downloads/`
 5. Publish `.zip` + checksum to GitHub Releases
@@ -183,7 +183,7 @@ The only auth-adjacent thing we ship is the connector declaration in `.mcp.json`
 }
 ```
 
-When the attorney installs the plugin, Claude Desktop's Connectors panel shows Gmail, Filesystem, and Google Calendar with a "Connect" button and the note "Required by: Solo Attorney Assistant." One click per connector completes setup.
+When the attorney installs the plugin, Claude Desktop's Connectors panel shows Filesystem with a "Connect" button and the note "Required by: AI Use Policy Generator." One click completes setup.
 
 ### 4.2 Data handling policies
 
@@ -305,8 +305,8 @@ No actual secrets are committed; placeholders documented in `.env.example`.
 
 ```bash
 # 1. Clone
-git clone https://github.com/protomated/claude-solo-attorney-starter-kit.git
-cd claude-solo-attorney-starter-kit
+git clone https://github.com/protomated/claude-ai-use-policy-generator.git
+cd claude-ai-use-policy-generator
 
 # 2. Inspect the structure
 tree -a
@@ -346,7 +346,7 @@ npm run build
 
 # Or individually:
 npm run validate   # validate plugin/ structure (scripts/validate-plugin.mjs)
-npm run pack       # zip to solo-attorney-starter-kit-v2.0.0.zip
+npm run pack       # zip to ai-use-policy-generator-v1.0.0.zip
 npm run checksum   # compute SHA-256
 
 # Cut a GitHub release (runs build first, then gh release create)
@@ -376,7 +376,7 @@ Attorneys install by double-clicking the `.zip` file or dragging it into Claude 
 **Signup URL:** https://kit.com
 
 - Sign up for the free **Newsletter plan** (10,000-subscriber limit)
-- Create a form titled "Solo Attorney Plugin Download"
+- Create a form titled "AI Use Policy Generator Download"
 - Configure the success action to send an email containing the GitHub Releases download link
 - Build a 4-email nurture sequence ending in a consulting CTA
 
@@ -386,7 +386,7 @@ Attorneys install by double-clicking the `.zip` file or dragging it into Claude 
 
 **Signup URL:** https://github.com
 
-- Create the `claude-solo-attorney-starter-kit` repository (private during dev, public for release)
+- Create the `claude-ai-use-policy-generator` repository (private during dev, public for release)
 - Configure GitHub Actions secrets per Section 7
 - First release published manually via UI; subsequent via CI on tag push
 
