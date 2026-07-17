@@ -1,6 +1,6 @@
 # AI Use Policy Generator v1.0.0
 
-Initial release. Replaces the Solo Attorney Starter Kit bundle — this repo is now a dedicated single-skill plugin per the PAC-A-3 one-plugin-per-issue model.
+Initial release.
 
 ## What's included
 
@@ -21,10 +21,3 @@ Install time: under 10 minutes. Connect the Filesystem connector once in Claude 
 ## Compliance
 
 Requires Claude for Work, Claude Team, or Claude Enterprise. Do not use a consumer Claude plan (Claude Pro or Personal) with confidential firm information. Every output carries an *AI-ASSISTED DRAFT — ATTORNEY REVIEW REQUIRED* header. All three generated documents are starting drafts that require attorney review and formal firm adoption before use. The plugin never writes files without your explicit in-conversation confirmation.
-
-## Changes from prior releases
-
-- Removed: `/intake-summary`, `/engagement-letter`, `/court-deadline`, `/meeting-prep`, `/billing-narrative`, `/new-matter-organizer` (moved to the Solo Attorney Starter Kit plugin)
-- Removed: Gmail and Google Calendar connector requirements (this plugin is filesystem-only)
-- Removed: Next.js site/ (landing page served from protomated.com/templates/ai-use-policy-generator/)
-- Plugin renamed: `ai-use-policy-generator`
