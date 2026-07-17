@@ -90,6 +90,10 @@ These rules are enforced in `prompts/system-prompt.md` and `SKILL.md`. Do not we
 3. **Plan-tier warning**: The system prompt must warn that consumer-tier Claude (claude.ai Personal / Pro) must not be used to enter confidential firm information.
 4. **Starting-draft caveat**: All three generated documents must carry language that they are starting drafts requiring attorney review and formal firm adoption before use. This is not optional.
 
+## Commit style
+
+Do not include `Co-Authored-By` attribution lines in commit messages.
+
 ## Canonical plugin description
 
 Used in `plugin/.claude-plugin/plugin.json` and any marketing copy — keep consistent:
