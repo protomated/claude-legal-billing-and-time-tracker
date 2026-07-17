@@ -90,6 +90,12 @@ These rules are enforced in `prompts/system-prompt.md` and `SKILL.md`. Do not we
 3. **Plan-tier warning**: The system prompt must warn that consumer-tier Claude (claude.ai Personal / Pro) must not be used to enter confidential firm information.
 4. **Starting-draft caveat**: All three generated documents must carry language that they are starting drafts requiring attorney review and formal firm adoption before use. This is not optional.
 
+## Canonical plugin description
+
+Used in `plugin/.claude-plugin/plugin.json` and any marketing copy — keep consistent:
+
+> A guided interview that drafts your firm's internal AI-use policy, a client-facing AI-disclosure clause for engagement letters, and a one-page safe AI checklist — tailored to your tools, practice areas, and jurisdiction.
+
 ## Notes
 
 - `plugin/manifest.json` has no `server` block — the plugin variant does not require one. Do not add one.
