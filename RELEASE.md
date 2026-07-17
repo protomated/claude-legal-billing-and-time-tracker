@@ -1,40 +1,30 @@
-# Solo Attorney Claude Starter Kit v2.0.0
+# AI Use Policy Generator v1.0.0
 
-**Breaking change:** two skills removed, three added, one new connector required.
+Initial release. Replaces the Solo Attorney Starter Kit bundle — this repo is now a dedicated single-skill plugin per the PAC-A-3 one-plugin-per-issue model.
 
-## What's new
+## What's included
 
-### Three new skills
-- **`/court-deadline`** — computes a court or filing deadline from a trigger date and rule you provide. Shows step-by-step reasoning. Drafts a Google Calendar event — you confirm before it's created.
-- **`/billing-narrative`** — drafts a billing-code-appropriate time narrative from your rough notes or an email thread. Suggests the time increment; you confirm accuracy before billing.
-- **`/new-matter-organizer`** — creates the standard folder tree and task checklist for a new matter based on practice area (PI, Family Law, Criminal Defense, Estate/Probate, Immigration, Contract). Sorts existing documents into the correct sub-folders — all changes require your confirmation.
+### `/ai-use-policy` — AI Use Policy & Client-Disclosure Generator
 
-### New connector: Google Calendar
-`/court-deadline` creates deadline events in your Google Calendar after explicit attorney confirmation. Connect once in Claude Desktop → Settings → Connectors → Google Calendar.
+A guided interview that produces three compliance documents tailored to your firm's tools, practice areas, and jurisdiction:
 
-### Plugin renamed
-Plugin ID is now `solo-attorney-starter-kit`.
+1. **Internal AI-Use Policy** — governance document covering approved tools and tier requirements, data classification rules, required disclosures, supervision and review requirements, staff training, prohibited uses, incident reporting, and a state ethics compliance placeholder.
+2. **Client-Facing AI-Disclosure Clause** — a ready-to-paste paragraph for engagement letters, with an optional client opt-out provision.
+3. **Safe AI Checklist** — a one-page operational reference with four checkpoints: before using AI on a matter, when entering content, when reviewing output, and before sending any AI-assisted document.
 
-## Removed
-
-- `/client-status-update` — not part of this bundle
-- `/demand-letter` — not part of this bundle
-
-## Skills included (v2.0.0)
-
-| Skill | What it does |
-|---|---|
-| `/intake-summary` | Converts raw consultation notes into a structured case brief; saves as `intake-summary.md` |
-| `/engagement-letter` | Drafts a retainer and engagement letter from intake data |
-| `/court-deadline` | Computes a court or filing deadline; drafts a Google Calendar event for confirmation |
-| `/meeting-prep` | Produces a one-page brief for client meetings, depositions, mediations, and court appearances |
-| `/billing-narrative` | Drafts a billing-code-appropriate time narrative from your notes or email thread |
-| `/new-matter-organizer` | Creates the standard folder tree and task checklist for a new matter |
+Also flags any consumer-grade AI tools (ChatGPT Plus/Pro, personal Claude, personal Copilot/Gemini/Perplexity, etc.) currently in use with client data, with specific risk notices and enterprise-tier alternatives.
 
 ## Setup
 
-Install time: ~5 minutes. Connect Gmail, your matters folder, and Google Calendar once in Claude Desktop → Settings → Connectors. See `plugin/CONNECTORS.md` for step-by-step instructions.
+Install time: under 10 minutes. Connect the Filesystem connector once in Claude Desktop → Settings → Connectors → Filesystem, then point it at your firm policies folder. See `plugin/CONNECTORS.md` for step-by-step instructions.
 
 ## Compliance
 
-Requires Claude for Work, Claude Team, or Claude Enterprise. Do not use a consumer Claude plan (Claude Pro) with client-privileged content. Every skill output carries an *AI-ASSISTED DRAFT — ATTORNEY REVIEW REQUIRED* header. The plugin never sends email, writes files, or creates calendar events without your explicit in-conversation confirmation.
+Requires Claude for Work, Claude Team, or Claude Enterprise. Do not use a consumer Claude plan (Claude Pro or Personal) with confidential firm information. Every output carries an *AI-ASSISTED DRAFT — ATTORNEY REVIEW REQUIRED* header. All three generated documents are starting drafts that require attorney review and formal firm adoption before use. The plugin never writes files without your explicit in-conversation confirmation.
+
+## Changes from prior releases
+
+- Removed: `/intake-summary`, `/engagement-letter`, `/court-deadline`, `/meeting-prep`, `/billing-narrative`, `/new-matter-organizer` (moved to the Solo Attorney Starter Kit plugin)
+- Removed: Gmail and Google Calendar connector requirements (this plugin is filesystem-only)
+- Removed: Next.js site/ (landing page served from protomated.com/templates/ai-use-policy-generator/)
+- Plugin renamed: `ai-use-policy-generator`
