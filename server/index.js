@@ -23,6 +23,35 @@ import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, listClients
 
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Returns both an HTML panel (renders in Claude Desktop Chat) and a short
+// connect URL (fallback for Cowork / environments that don't render HTML).
+function notConnectedResponse(sessionId) {
+  const connectUrl = sessionId ? `${SERVER_URL}/connect?s=${sessionId}` : null;
+  const content = [];
+
+  if (connectUrl) {
+    content.push({
+      type: 'text',
+      text: `Google not connected. Sign in to continue:\n${connectUrl}`,
+    });
+  } else {
+    content.push({ type: 'text', text: 'Google not connected. Ask me to "connect Google".' });
+  }
+
+  content.push({
+    type: 'resource',
+    resource: {
+      uri: CONNECT_GOOGLE_URI,
+      mimeType: 'text/html;profile=mcp-app',
+      text: connectGoogleHtml,
+    },
+  });
+
+  return { content, isError: true };
+}
+
 // ── In-memory session store: sessionId → Google sub ─────────────────────────
 // Sessions are intentionally in-memory — attorneys re-auth when they start a
 // new Claude conversation, which triggers Google's one-click "Sign in as you"
@@ -169,11 +198,13 @@ function createMCPServer(sessionIdRef) {
         }
         const sessionId = sessionIdRef.current;
         if (!sessionId) return err('Session not ready. Try again.');
-        const authUrl = getAuthUrl(sessionId);
-        return text(
-          `Open this link to sign in with Google:\n\n${authUrl}\n\n` +
-          `After signing in, return here and I\'ll pick up where we left off.`
-        );
+        const connectUrl = `${SERVER_URL}/connect?s=${sessionId}`;
+        return {
+          content: [
+            { type: 'text', text: `Sign in with Google to connect your billing sheet:\n${connectUrl}` },
+            { type: 'resource', resource: { uri: CONNECT_GOOGLE_URI, mimeType: 'text/html;profile=mcp-app', text: connectGoogleHtml } },
+          ],
+        };
       }
 
       // ── set_spreadsheet_url ─────────────────────────────────────────────
@@ -188,12 +219,7 @@ function createMCPServer(sessionIdRef) {
 
       // ── All other tools require auth + sheet ────────────────────────────
       if (!sub || !user?.tokens) {
-        const sessionId = sessionIdRef.current;
-        const authUrl   = sessionId ? getAuthUrl(sessionId) : null;
-        return err(
-          'Google not connected.' +
-          (authUrl ? ` Sign in here: ${authUrl}` : ' Ask me to "connect Google" to get the sign-in link.')
-        );
+        return notConnectedResponse(sessionIdRef.current);
       }
 
       if (!user.spreadsheetId) {
@@ -206,12 +232,7 @@ function createMCPServer(sessionIdRef) {
 
       const auth = await getAuthClient(sub);
       if (!auth) {
-        const sessionId = sessionIdRef.current;
-        const authUrl   = sessionId ? getAuthUrl(sessionId) : null;
-        return err(
-          'Google authentication expired.' +
-          (authUrl ? ` Re-connect here: ${authUrl}` : ' Ask me to "connect Google" to reconnect.')
-        );
+        return notConnectedResponse(sessionIdRef.current);
       }
 
       switch (name) {
@@ -224,9 +245,7 @@ function createMCPServer(sessionIdRef) {
       }
     } catch (e) {
       if (e.message?.includes('invalid_grant') || e.message?.includes('Token has been expired')) {
-        const sessionId = sessionIdRef.current;
-        const authUrl   = sessionId ? getAuthUrl(sessionId) : null;
-        return err('Google authentication expired.' + (authUrl ? ` Re-connect here: ${authUrl}` : ''));
+        return notConnectedResponse(sessionIdRef.current);
       }
       return err(`Error: ${e.message}`);
     }
@@ -340,6 +359,45 @@ app.all('/mcp', async (req, res) => {
   const server = createMCPServer(sessionIdRef);
   await server.connect(transport);
   await transport.handleRequest(req, res, req.body);
+});
+
+// Clean sign-in page — short URL returned to Claude instead of the raw OAuth URL.
+// Attorney clicks it, sees the branded page, clicks Sign in with Google.
+app.get('/connect', (req, res) => {
+  const sessionId = req.query.s;
+  const authUrl   = getAuthUrl(sessionId || randomUUID());
+  res.send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legal Billing — Connect Google</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1e1e2e;color:#e2e2f0;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#26263a;border:1px solid #38385a;border-radius:14px;padding:28px;width:100%;max-width:360px}
+.header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #38385a}
+.icon{width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.title{font-size:14px;font-weight:600}.sub{font-size:12px;color:#7a7a9a;margin-top:1px}
+h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.desc{font-size:13px;color:#7a7a9a;line-height:1.55;margin-bottom:22px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:10px 16px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;transition:background .15s,box-shadow .15s}
+.btn:hover{background:#f8f9fa;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+</style></head>
+<body><div class="card">
+  <div class="header">
+    <div class="icon">⚖</div>
+    <div><div class="title">Legal Billing</div><div class="sub">by Protomated</div></div>
+  </div>
+  <h3>Connect Google Sheets</h3>
+  <p class="desc">Sign in to allow Legal Billing to read and write your billing sheet. Your data stays in your own Google Drive.</p>
+  <a class="btn" href="${authUrl}">
+    <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.705 17.64 9.2z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+      <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+    </svg>
+    Sign in with Google
+  </a>
+</div></body></html>`);
 });
 
 // Google OAuth callback — state carries the MCP session ID
