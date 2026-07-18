@@ -143,7 +143,8 @@ export async function getDashboard(auth, spreadsheetId) {
 export async function getTimeEntries(auth, spreadsheetId, { clientName, status, limit = 50 } = {}) {
   const res = await sheetsClient(auth).spreadsheets.values.get({
     spreadsheetId,
-    range: `'${TIME_TRACKER}'!A:J`,
+    range: `'${TIME_TRACKER}'!A:K`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
   });
 
   const rows = res.data.values ?? [];
@@ -187,7 +188,8 @@ export async function listClients(auth, spreadsheetId) {
 export async function getClientSummary(auth, spreadsheetId, clientName) {
   const res = await sheetsClient(auth).spreadsheets.values.get({
     spreadsheetId,
-    range: `'${TIME_TRACKER}'!A:J`,
+    range: `'${TIME_TRACKER}'!A:K`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
   });
   const rows = res.data.values ?? [];
   const clientLower = clientName.toLowerCase();
