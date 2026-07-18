@@ -14,7 +14,7 @@ import {
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { getUser, saveUser, findSingleUser } from './db.js';
+import { initDb, getUser, saveUser, findSingleUser } from './db.js';
 import { getAuthUrl, getAuthClient, handleOAuthCallback, REDIRECT_URI } from './auth.js';
 import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary, getTrustEntries, getYearEndSummary, getMatterProfitability, getInvoice } from '../plugin/server/sheets.js';
 
@@ -199,13 +199,13 @@ function createMCPServer(sessionIdRef) {
   const text = (t) => ({ content: [{ type: 'text', text: String(t) }] });
   const err  = (t) => ({ content: [{ type: 'text', text: String(t) }], isError: true });
 
-  function getSessionSub() {
+  async function getSessionSub() {
     const sid = sessionIdRef.current;
     if (sessions.has(sid)) return sessions.get(sid);
 
     // Session was reset (server restart or MCP reconnect during OAuth).
     // Recover by binding to the single stored user, if there is exactly one.
-    const sub = findSingleUser();
+    const sub = await findSingleUser();
     if (sub) { sessions.set(sid, sub); return sub; }
 
     return null;
@@ -215,8 +215,8 @@ function createMCPServer(sessionIdRef) {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
-    const sub  = getSessionSub();
-    const user = sub ? getUser(sub) : null;
+    const sub  = await getSessionSub();
+    const user = sub ? await getUser(sub) : null;
 
     try {
       // ── connect_google ──────────────────────────────────────────────────
@@ -239,7 +239,7 @@ function createMCPServer(sessionIdRef) {
         const url = args.url ?? '';
         const m   = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
         if (!m) return err('That doesn\'t look like a Google Sheets URL. Copy the full URL from your browser address bar while the sheet is open.');
-        saveUser(sub, { spreadsheetUrl: url, spreadsheetId: m[1] });
+        await saveUser(sub, { spreadsheetUrl: url, spreadsheetId: m[1] });
         return text('✅ Sheet saved. Your Legal Billing tools are ready — try "Get my billing dashboard".');
       }
 
@@ -285,8 +285,8 @@ function createMCPServer(sessionIdRef) {
   // ── Resources ─────────────────────────────────────────────────────────────
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
-    const sub  = getSessionSub();
-    const user = sub ? getUser(sub) : null;
+    const sub  = await getSessionSub();
+    const user = sub ? await getUser(sub) : null;
     const base = [
       { uri: 'billing://dashboard', name: 'Billing Dashboard', description: 'Total hours, fees billed, collected, and outstanding', mimeType: 'application/json' },
       { uri: 'billing://clients',   name: 'Client List',       description: 'All clients with billable time entries',                mimeType: 'application/json' },
@@ -321,8 +321,8 @@ function createMCPServer(sessionIdRef) {
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params;
-    const sub    = getSessionSub();
-    const user   = sub ? getUser(sub) : null;
+    const sub    = await getSessionSub();
+    const user   = sub ? await getUser(sub) : null;
     const noData = (msg) => ({ contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ error: msg }) }] });
 
     if (!user?.spreadsheetId) return noData('No spreadsheet configured.');
@@ -454,6 +454,8 @@ app.get('/oauth/callback', async (req, res) => {
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0' }));
+
+await initDb();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

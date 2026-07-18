@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { OAuth2Client } from 'google-auth-library';
 import { getUser, saveUser } from './db.js';
 
-
 // Web application OAuth credentials — requires a separate OAuth client from the Desktop app
 // client used in plugin/server/auth.js. Create one at Google Cloud Console → Credentials →
 // OAuth client ID → Web application, then add ${SERVER_URL}/oauth/callback as a redirect URI.
@@ -38,14 +37,13 @@ export async function handleOAuthCallback(code) {
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
 
-  // Get Google user identity from userinfo endpoint.
   const res = await client.request({ url: 'https://www.googleapis.com/oauth2/v3/userinfo' });
   const { sub, email } = res.data;
 
-  saveUser(sub, { tokens, email });
-  client.on('tokens', (updated) => {
-    const u = getUser(sub);
-    if (u) saveUser(sub, { tokens: { ...u.tokens, ...updated } });
+  await saveUser(sub, { tokens, email });
+  client.on('tokens', async (updated) => {
+    const u = await getUser(sub);
+    if (u) await saveUser(sub, { tokens: { ...u.tokens, ...updated } });
   });
 
   return { client, sub, email };
@@ -53,13 +51,13 @@ export async function handleOAuthCallback(code) {
 
 // Build an authenticated client for an attorney identified by their Google sub.
 export async function getAuthClient(sub) {
-  const user = getUser(sub);
+  const user = await getUser(sub);
   if (!user?.tokens) return null;
   const client = buildClient();
   client.setCredentials(user.tokens);
-  client.on('tokens', (updated) => {
-    const u = getUser(sub);
-    if (u) saveUser(sub, { tokens: { ...u.tokens, ...updated } });
+  client.on('tokens', async (updated) => {
+    const u = await getUser(sub);
+    if (u) await saveUser(sub, { tokens: { ...u.tokens, ...updated } });
   });
   return client;
 }
