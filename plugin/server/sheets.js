@@ -1,9 +1,12 @@
 import { google } from 'googleapis';
 
 // Tab names — must match the template sheet exactly.
-const TIME_TRACKER = 'Time Tracker';
-const TRUST_ACCOUNT = 'Trust Account';
-const DASHBOARD = 'Dashboard';
+const TIME_TRACKER      = 'Time Tracker';
+const TRUST_ACCOUNT     = 'Trust Account';
+const DASHBOARD         = 'Dashboard';
+const YEAR_END_SUMMARY  = 'Year-End Summary';
+const RATE_MY_MATTERS   = 'Rate My Matters';
+const INVOICE           = 'Invoice';
 
 // Time Tracker columns (1-indexed): A=Date B=ClientName C=MatterName D=MatterType
 // E=Description F=Hours G=Rate H=TotalFee(formula) I=Status J=InvoiceDate
@@ -185,6 +188,80 @@ export async function listClients(auth, spreadsheetId) {
   const rows = res.data.values ?? [];
   const clients = [...new Set(rows.slice(1).map(r => r[0]).filter(Boolean))].sort();
   return clients;
+}
+
+export async function getTrustEntries(auth, spreadsheetId, { clientName, limit = 50 } = {}) {
+  const res = await sheetsClient(auth).spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${TRUST_ACCOUNT}'!A:I`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
+  });
+
+  const rows = res.data.values ?? [];
+  let entries = rows.slice(1)
+    .filter(r => r[0])
+    .map(r => ({
+      date:        r[0] ?? '',
+      client:      r[1] ?? '',
+      matter:      r[2] ?? '',
+      description: r[3] ?? '',
+      deposit:     parseFloat(r[4]) || 0,
+      withdrawal:  parseFloat(r[5]) || 0,
+      balance:     parseFloat(r[6]) || 0,
+      bankBalance: parseFloat(r[7]) || 0,
+      difference:  parseFloat(r[8]) || 0,
+    }));
+
+  if (clientName) {
+    const lower = clientName.toLowerCase();
+    entries = entries.filter(e => e.client.toLowerCase().includes(lower));
+  }
+
+  entries = entries.reverse().slice(0, limit);
+  return { success: true, count: entries.length, entries };
+}
+
+export async function getYearEndSummary(auth, spreadsheetId) {
+  const res = await sheetsClient(auth).spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${YEAR_END_SUMMARY}'!A:B`,
+  });
+
+  const rows = (res.data.values ?? []).filter(r => r[0] && r[1]);
+  return { success: true, rows };
+}
+
+export async function getMatterProfitability(auth, spreadsheetId) {
+  const res = await sheetsClient(auth).spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${RATE_MY_MATTERS}'!A:G`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
+  });
+
+  const rows = res.data.values ?? [];
+  const entries = rows.slice(1)
+    .filter(r => r[0])
+    .map(r => ({
+      matterName:    r[0] ?? '',
+      matterType:    r[1] ?? '',
+      flatFee:       parseFloat(r[2]) || 0,
+      totalHours:    parseFloat(r[3]) || 0,
+      effectiveRate: parseFloat(r[4]) || 0,
+      standardRate:  parseFloat(r[5]) || 0,
+      verdict:       r[6] ?? '',
+    }));
+
+  return { success: true, count: entries.length, entries };
+}
+
+export async function getInvoice(auth, spreadsheetId) {
+  const res = await sheetsClient(auth).spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${INVOICE}'!A:H`,
+  });
+
+  const rows = (res.data.values ?? []).filter(r => r.some(c => c !== '' && c != null));
+  return { success: true, rows };
 }
 
 export async function getClientSummary(auth, spreadsheetId, clientName) {

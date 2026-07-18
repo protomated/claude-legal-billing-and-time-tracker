@@ -92,13 +92,24 @@ MCP server (Node.js, local) → Google Sheets API → attorney's Google Sheet
 | `mark_billed` | Update Unbilled → Billed for a client |
 | `mark_paid` | Update Billed → Paid (requires explicit confirmation before call) |
 | `add_trust_entry` | Append deposit or withdrawal to Trust Account tab |
-| `get_dashboard` | Read Dashboard tab and return summary rows |
+| `get_dashboard` | Read Dashboard tab summary rows |
+| `get_time_entries` | Read Time Tracker rows; filter by client/status |
+| `get_trust_entries` | Read Trust Account rows; filter by client |
+| `get_year_end_summary` | Read Year-End Summary tab (annual revenue totals) |
+| `get_matter_profitability` | Read Rate My Matters tab (matter profitability analysis) |
+| `get_invoice` | Read Invoice tab (current invoice preview) |
 
 ## Sheet column layout
 
 **Time Tracker** (A–K): Date | Client Name | Matter Name | Matter Type | Description of Work | Hours Worked | Hourly Rate ($) | Total Fee (formula) | Invoice Status | Date Invoiced | Date Paid
 
 **Trust Account** (A–I): Date | Client Name | Matter Name | Description | Deposits (+) | Withdrawals (-) | Running Balance (formula) | Bank Statement Balance | Difference
+
+**Rate My Matters** (A–G): Matter Name | Matter Type | Flat Fee Charged ($) | Total Hours Spent | Effective Hourly Rate | Standard Hourly Rate | Verdict
+
+**Year-End Summary** (A–B): Label | Value (Total Revenue Billed, Collected, Uncollected)
+
+**Invoice** (A–H): Template invoice — firm header, client info, line items, totals (read-only via `get_invoice`)
 
 **Dashboard** (A–B): Label | Value (read-only; auto-calculated formulas)
 

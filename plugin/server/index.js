@@ -12,7 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { getAuthClient, authenticate } from './auth.js';
 import { loadTokens } from './config.js';
-import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary } from './sheets.js';
+import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary, getTrustEntries, getYearEndSummary, getMatterProfitability, getInvoice } from './sheets.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const connectGoogleHtml = readFileSync(join(__dirname, 'ui', 'connect-google.html'), 'utf8');
@@ -138,6 +138,32 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'get_trust_entries',
+    description: 'Read trust account activity from the Trust Account tab. Use this when the attorney asks to review trust deposits, withdrawals, or running balance. Optionally filter by client.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        clientName: { type: 'string', description: 'Filter by client name (partial match, case-insensitive).' },
+        limit: { type: 'number', description: 'Max entries to return (default 50, most recent first).' },
+      },
+    },
+  },
+  {
+    name: 'get_year_end_summary',
+    description: 'Read the Year-End Summary tab and return annual revenue totals: Total Revenue Billed, Total Revenue Collected, Total Uncollected.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_matter_profitability',
+    description: 'Read the Rate My Matters tab showing profitability analysis per matter: flat fee charged vs hours spent, effective vs standard hourly rate, and a verdict. Use this when the attorney asks which matters were profitable or how they performed.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_invoice',
+    description: 'Read the Invoice tab and return the current invoice data (firm info, client, line items, totals). Use this when the attorney asks to preview or review the invoice before sending.',
+    inputSchema: { type: 'object', properties: {} },
+  },
 ];
 
 const server = new Server(
@@ -182,13 +208,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     switch (name) {
-      case 'log_time':       return text(JSON.stringify(await logTime(auth, spreadsheetId, args)));
-      case 'mark_billed':    return text(JSON.stringify(await markBilled(auth, spreadsheetId, args.clientName)));
-      case 'mark_paid':      return text(JSON.stringify(await markPaid(auth, spreadsheetId, args.clientName)));
-      case 'add_trust_entry':return text(JSON.stringify(await addTrustEntry(auth, spreadsheetId, args)));
-      case 'get_dashboard':    return text(JSON.stringify(await getDashboard(auth, spreadsheetId)));
-      case 'get_time_entries': return text(JSON.stringify(await getTimeEntries(auth, spreadsheetId, args)));
-      default:                 return err(`Unknown tool: ${name}`);
+      case 'log_time':               return text(JSON.stringify(await logTime(auth, spreadsheetId, args)));
+      case 'mark_billed':            return text(JSON.stringify(await markBilled(auth, spreadsheetId, args.clientName)));
+      case 'mark_paid':              return text(JSON.stringify(await markPaid(auth, spreadsheetId, args.clientName)));
+      case 'add_trust_entry':        return text(JSON.stringify(await addTrustEntry(auth, spreadsheetId, args)));
+      case 'get_dashboard':          return text(JSON.stringify(await getDashboard(auth, spreadsheetId)));
+      case 'get_time_entries':       return text(JSON.stringify(await getTimeEntries(auth, spreadsheetId, args)));
+      case 'get_trust_entries':      return text(JSON.stringify(await getTrustEntries(auth, spreadsheetId, args)));
+      case 'get_year_end_summary':   return text(JSON.stringify(await getYearEndSummary(auth, spreadsheetId)));
+      case 'get_matter_profitability': return text(JSON.stringify(await getMatterProfitability(auth, spreadsheetId)));
+      case 'get_invoice':            return text(JSON.stringify(await getInvoice(auth, spreadsheetId)));
+      default:                       return err(`Unknown tool: ${name}`);
     }
   } catch (e) {
     if (e.message?.includes('invalid_grant') || e.message?.includes('Token has been expired')) {

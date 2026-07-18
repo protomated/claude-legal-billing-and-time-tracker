@@ -19,7 +19,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { getUser, saveUser } from './db.js';
 import { getAuthUrl, getAuthClient, handleOAuthCallback, REDIRECT_URI } from './auth.js';
-import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary } from '../plugin/server/sheets.js';
+import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary, getTrustEntries, getYearEndSummary, getMatterProfitability, getInvoice } from '../plugin/server/sheets.js';
 
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
 
@@ -182,6 +182,32 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'get_trust_entries',
+    description: 'Read trust account activity from the Trust Account tab. Use this when the attorney asks to review trust deposits, withdrawals, or running balance. Optionally filter by client.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        clientName: { type: 'string', description: 'Filter by client name (partial match, case-insensitive).' },
+        limit: { type: 'number', description: 'Max entries to return (default 50, most recent first).' },
+      },
+    },
+  },
+  {
+    name: 'get_year_end_summary',
+    description: 'Read the Year-End Summary tab and return annual revenue totals: Total Revenue Billed, Total Revenue Collected, Total Uncollected.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_matter_profitability',
+    description: 'Read the Rate My Matters tab showing profitability analysis per matter: flat fee charged vs hours spent, effective vs standard hourly rate, and a verdict. Use this when the attorney asks which matters were profitable or how they performed.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_invoice',
+    description: 'Read the Invoice tab and return the current invoice data (firm info, client, line items, totals). Use this when the attorney asks to preview or review the invoice before sending.',
+    inputSchema: { type: 'object', properties: {} },
+  },
 ];
 
 // ── MCP server factory ───────────────────────────────────────────────────────
@@ -252,13 +278,17 @@ function createMCPServer(sessionIdRef) {
       }
 
       switch (name) {
-        case 'log_time':        return text(JSON.stringify(await logTime(auth, user.spreadsheetId, args)));
-        case 'mark_billed':     return text(JSON.stringify(await markBilled(auth, user.spreadsheetId, args.clientName)));
-        case 'mark_paid':       return text(JSON.stringify(await markPaid(auth, user.spreadsheetId, args.clientName)));
-        case 'add_trust_entry': return text(JSON.stringify(await addTrustEntry(auth, user.spreadsheetId, args)));
-        case 'get_dashboard':    return text(JSON.stringify(await getDashboard(auth, user.spreadsheetId)));
-        case 'get_time_entries': return text(JSON.stringify(await getTimeEntries(auth, user.spreadsheetId, args)));
-        default:                 return err(`Unknown tool: ${name}`);
+        case 'log_time':               return text(JSON.stringify(await logTime(auth, user.spreadsheetId, args)));
+        case 'mark_billed':            return text(JSON.stringify(await markBilled(auth, user.spreadsheetId, args.clientName)));
+        case 'mark_paid':              return text(JSON.stringify(await markPaid(auth, user.spreadsheetId, args.clientName)));
+        case 'add_trust_entry':        return text(JSON.stringify(await addTrustEntry(auth, user.spreadsheetId, args)));
+        case 'get_dashboard':          return text(JSON.stringify(await getDashboard(auth, user.spreadsheetId)));
+        case 'get_time_entries':       return text(JSON.stringify(await getTimeEntries(auth, user.spreadsheetId, args)));
+        case 'get_trust_entries':      return text(JSON.stringify(await getTrustEntries(auth, user.spreadsheetId, args)));
+        case 'get_year_end_summary':   return text(JSON.stringify(await getYearEndSummary(auth, user.spreadsheetId)));
+        case 'get_matter_profitability': return text(JSON.stringify(await getMatterProfitability(auth, user.spreadsheetId)));
+        case 'get_invoice':            return text(JSON.stringify(await getInvoice(auth, user.spreadsheetId)));
+        default:                       return err(`Unknown tool: ${name}`);
       }
     } catch (e) {
       if (e.message?.includes('invalid_grant') || e.message?.includes('Token has been expired')) {
