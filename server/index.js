@@ -14,7 +14,7 @@ import {
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { getUser, saveUser } from './db.js';
+import { getUser, saveUser, findSingleUser } from './db.js';
 import { getAuthUrl, getAuthClient, handleOAuthCallback, REDIRECT_URI } from './auth.js';
 import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary, getTrustEntries, getYearEndSummary, getMatterProfitability, getInvoice } from '../plugin/server/sheets.js';
 
@@ -200,7 +200,15 @@ function createMCPServer(sessionIdRef) {
   const err  = (t) => ({ content: [{ type: 'text', text: String(t) }], isError: true });
 
   function getSessionSub() {
-    return sessions.get(sessionIdRef.current);
+    const sid = sessionIdRef.current;
+    if (sessions.has(sid)) return sessions.get(sid);
+
+    // Session was reset (server restart or MCP reconnect during OAuth).
+    // Recover by binding to the single stored user, if there is exactly one.
+    const sub = findSingleUser();
+    if (sub) { sessions.set(sid, sub); return sub; }
+
+    return null;
   }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
