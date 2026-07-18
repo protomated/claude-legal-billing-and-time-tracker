@@ -1,7 +1,4 @@
 import { randomUUID } from 'crypto';
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import express from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -12,14 +9,17 @@ import {
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { getUser, createUser } from './db.js';
+import { getUser, saveUser } from './db.js';
 import { getAuthUrl, getAuthClient, handleOAuthCallback, REDIRECT_URI } from './auth.js';
 import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, listClients, getClientSummary } from '../plugin/server/sheets.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const setupHtml  = readFileSync(join(__dirname, 'setup.html'),  'utf8');
-
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
+
+// ── In-memory session store: sessionId → Google sub ─────────────────────────
+// Sessions are intentionally in-memory — attorneys re-auth when they start a
+// new Claude conversation, which triggers Google's one-click "Sign in as you"
+// flow (no password re-entry if already logged in).
+const sessions = new Map(); // sessionId → sub
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -27,13 +27,26 @@ const TOOLS = [
   {
     name: 'connect_google',
     description:
-      'Get the Google sign-in link, or check connection status. ' +
+      'Get the Google sign-in link or check connection status. ' +
       'Call with check_only: true to verify; call without arguments to get the sign-in URL. ' +
-      'Only call this when the user asks to connect Google or when another tool returns an auth error.',
+      'Always call this first if another tool returns an auth error.',
     inputSchema: {
       type: 'object',
       properties: {
-        check_only: { type: 'boolean', description: 'If true, return connection status without a sign-in link.' },
+        check_only: { type: 'boolean', description: 'If true, return status without a sign-in link.' },
+      },
+    },
+  },
+  {
+    name: 'set_spreadsheet_url',
+    description:
+      'Save the attorney\'s Google Sheet URL. Call this when the attorney shares a Google Sheets URL ' +
+      'during setup. The URL must contain "docs.google.com/spreadsheets".',
+    inputSchema: {
+      type: 'object',
+      required: ['url'],
+      properties: {
+        url: { type: 'string', description: 'Full Google Sheets URL from the browser address bar.' },
       },
     },
   },
@@ -115,9 +128,9 @@ const TOOLS = [
   },
 ];
 
-// ── MCP server factory (one instance per session) ────────────────────────────
+// ── MCP server factory ───────────────────────────────────────────────────────
 
-function createMCPServer(apiKey) {
+function createMCPServer(sessionIdRef) {
   const server = new Server(
     { name: 'legal-billing', version: '1.0.0' },
     { capabilities: { tools: {}, resources: {} } }
@@ -126,27 +139,68 @@ function createMCPServer(apiKey) {
   const text = (t) => ({ content: [{ type: 'text', text: String(t) }] });
   const err  = (t) => ({ content: [{ type: 'text', text: String(t) }], isError: true });
 
+  function getSessionSub() {
+    return sessions.get(sessionIdRef.current);
+  }
+
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
-    const user = getUser(apiKey);
-    if (!user) return err('Invalid API key.');
+    const sub  = getSessionSub();
+    const user = sub ? getUser(sub) : null;
 
     try {
+      // ── connect_google ──────────────────────────────────────────────────
       if (name === 'connect_google') {
-        if (args.check_only) return text(user.tokens ? 'connected' : 'not_connected');
-        const authUrl = getAuthUrl(apiKey);
-        return text(`Open this URL to connect your Google account:\n\n${authUrl}\n\nReturn here after signing in.`);
+        if (args.check_only) {
+          return text(sub && user?.tokens ? 'connected' : 'not_connected');
+        }
+        const sessionId = sessionIdRef.current;
+        if (!sessionId) return err('Session not ready. Try again.');
+        const authUrl = getAuthUrl(sessionId);
+        return text(
+          `Open this link to sign in with Google:\n\n${authUrl}\n\n` +
+          `After signing in, return here and I\'ll pick up where we left off.`
+        );
+      }
+
+      // ── set_spreadsheet_url ─────────────────────────────────────────────
+      if (name === 'set_spreadsheet_url') {
+        if (!sub) return err('Please connect Google first before setting up your sheet.');
+        const url = args.url ?? '';
+        const m   = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        if (!m) return err('That doesn\'t look like a Google Sheets URL. Copy the full URL from your browser address bar while the sheet is open.');
+        saveUser(sub, { spreadsheetUrl: url, spreadsheetId: m[1] });
+        return text('✅ Sheet saved. Your Legal Billing tools are ready — try "Get my billing dashboard".');
+      }
+
+      // ── All other tools require auth + sheet ────────────────────────────
+      if (!sub || !user?.tokens) {
+        const sessionId = sessionIdRef.current;
+        const authUrl   = sessionId ? getAuthUrl(sessionId) : null;
+        return err(
+          'Google not connected.' +
+          (authUrl ? ` Sign in here: ${authUrl}` : ' Ask me to "connect Google" to get the sign-in link.')
+        );
       }
 
       if (!user.spreadsheetId) {
-        return err('No Google Sheet configured. Visit your setup page to add a sheet URL.');
+        return err(
+          'No Google Sheet configured yet. ' +
+          'Please share the URL of your billing sheet (copy it from the browser address bar while the sheet is open) ' +
+          'and I\'ll save it for you.'
+        );
       }
 
-      const auth = await getAuthClient(apiKey);
+      const auth = await getAuthClient(sub);
       if (!auth) {
-        return err('Google not connected. Ask me to "connect Google" to get the sign-in link.');
+        const sessionId = sessionIdRef.current;
+        const authUrl   = sessionId ? getAuthUrl(sessionId) : null;
+        return err(
+          'Google authentication expired.' +
+          (authUrl ? ` Re-connect here: ${authUrl}` : ' Ask me to "connect Google" to reconnect.')
+        );
       }
 
       switch (name) {
@@ -159,26 +213,31 @@ function createMCPServer(apiKey) {
       }
     } catch (e) {
       if (e.message?.includes('invalid_grant') || e.message?.includes('Token has been expired')) {
-        return err('Google authentication expired. Ask me to "connect Google" to reconnect.');
+        const sessionId = sessionIdRef.current;
+        const authUrl   = sessionId ? getAuthUrl(sessionId) : null;
+        return err('Google authentication expired.' + (authUrl ? ` Re-connect here: ${authUrl}` : ''));
       }
       return err(`Error: ${e.message}`);
     }
   });
 
+  // ── Resources ─────────────────────────────────────────────────────────────
+
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
-    const staticResources = [
+    const sub  = getSessionSub();
+    const user = sub ? getUser(sub) : null;
+    const base = [
       { uri: 'billing://dashboard', name: 'Billing Dashboard', description: 'Total hours, fees billed, collected, and outstanding', mimeType: 'application/json' },
       { uri: 'billing://clients',   name: 'Client List',       description: 'All clients with billable time entries',                mimeType: 'application/json' },
     ];
-    const user = getUser(apiKey);
-    if (!user?.spreadsheetId || !user?.tokens) return { resources: staticResources };
+    if (!user?.spreadsheetId || !user?.tokens) return { resources: base };
     try {
-      const auth = await getAuthClient(apiKey);
-      if (!auth) return { resources: staticResources };
+      const auth = await getAuthClient(sub);
+      if (!auth) return { resources: base };
       const clients = await listClients(auth, user.spreadsheetId);
       return {
         resources: [
-          ...staticResources,
+          ...base,
           ...clients.map(name => ({
             uri: `billing://client/${encodeURIComponent(name)}`,
             name,
@@ -187,7 +246,7 @@ function createMCPServer(apiKey) {
           })),
         ],
       };
-    } catch { return { resources: staticResources }; }
+    } catch { return { resources: base }; }
   });
 
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
@@ -201,14 +260,12 @@ function createMCPServer(apiKey) {
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params;
-    const user = getUser(apiKey);
-
-    const noData = (msg) => ({
-      contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ error: msg }) }],
-    });
+    const sub    = getSessionSub();
+    const user   = sub ? getUser(sub) : null;
+    const noData = (msg) => ({ contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ error: msg }) }] });
 
     if (!user?.spreadsheetId) return noData('No spreadsheet configured.');
-    const auth = await getAuthClient(apiKey);
+    const auth = await getAuthClient(sub);
     if (!auth) return noData('Not authenticated. Ask me to connect Google.');
 
     if (uri === 'billing://dashboard') {
@@ -235,122 +292,71 @@ app.use(express.json());
 
 const transports = new Map(); // sessionId → transport
 
-function extractApiKey(req) {
-  return req.query.key || req.headers['x-api-key'] || null;
-}
-
-// MCP endpoint — handles all three HTTP methods required by Streamable HTTP spec
 app.all('/mcp', async (req, res) => {
-  const apiKey = extractApiKey(req);
-  if (!apiKey || !getUser(apiKey)) {
-    res.status(401).json({ error: 'Invalid or missing API key. Visit /setup to get yours.' });
-    return;
-  }
-
-  const sessionId = req.headers['mcp-session-id'];
+  const existingSessionId = req.headers['mcp-session-id'];
 
   // Route to existing session
-  if (sessionId && transports.has(sessionId)) {
-    await transports.get(sessionId).handleRequest(req, res, req.body);
+  if (existingSessionId && transports.has(existingSessionId)) {
+    await transports.get(existingSessionId).handleRequest(req, res, req.body);
     return;
   }
 
-  // New session — only POST allowed for initialization
   if (req.method !== 'POST') { res.status(404).end(); return; }
+
+  // New session — sessionId is assigned during handleRequest
+  const sessionIdRef = { current: null };
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
-    onsessioninitialized: (sid) => transports.set(sid, transport),
+    onsessioninitialized: (sid) => {
+      sessionIdRef.current = sid;
+      transports.set(sid, transport);
+    },
   });
-  transport.onclose = () => { if (transport.sessionId) transports.delete(transport.sessionId); };
 
-  const server = createMCPServer(apiKey);
+  transport.onclose = () => {
+    if (transport.sessionId) {
+      transports.delete(transport.sessionId);
+      sessions.delete(transport.sessionId);
+    }
+  };
+
+  const server = createMCPServer(sessionIdRef);
   await server.connect(transport);
   await transport.handleRequest(req, res, req.body);
 });
 
-// Google OAuth callback
+// Google OAuth callback — state carries the MCP session ID
 app.get('/oauth/callback', async (req, res) => {
-  const { code, state: apiKey, error } = req.query;
-  if (error || !code || !apiKey) {
+  const { code, state: sessionId, error } = req.query;
+
+  if (error || !code) {
     res.send('<html><body><h2>Access denied. Close this tab and try again.</h2></body></html>');
     return;
   }
+
   try {
-    await handleOAuthCallback(code, apiKey);
-    res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f0fdf4">
-<div style="text-align:center">
+    const { sub, email } = await handleOAuthCallback(code);
+    if (sessionId) sessions.set(sessionId, sub);
+
+    res.send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f0fdf4;text-align:center">
+<div>
   <div style="font-size:48px">✅</div>
-  <h2 style="color:#166534">Google connected!</h2>
-  <p style="color:#15803d">You can close this tab and return to Claude.</p>
-</div></body></html>`);
+  <h2 style="color:#166534;margin:12px 0 6px">Connected as ${email}</h2>
+  <p style="color:#15803d">Close this tab and return to Claude.</p>
+</div>
+</body></html>`);
   } catch (e) {
     res.send(`<html><body><h2>Error: ${e.message}</h2></body></html>`);
   }
 });
 
-// Attorney onboarding — get an API key and MCP URL
-app.get('/setup', (_req, res) => res.send(setupHtml));
-
-app.post('/setup', express.urlencoded({ extended: false }), (req, res) => {
-  const { spreadsheet_url } = req.body;
-  if (!spreadsheet_url?.includes('docs.google.com/spreadsheets')) {
-    res.status(400).send('<html><body><h2>Invalid sheet URL. Go back and try again.</h2></body></html>');
-    return;
-  }
-  const apiKey = randomUUID().replace(/-/g, '');
-  createUser(apiKey, spreadsheet_url);
-  const mcpUrl   = `${SERVER_URL}/mcp?key=${apiKey}`;
-  const googleUrl = getAuthUrl(apiKey);
-  res.send(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Legal Billing — Setup Complete</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:60px auto;padding:0 20px;color:#111}
-code{background:#f4f4f5;padding:2px 6px;border-radius:4px;font-size:13px;word-break:break-all}
-.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:20px 0}
-.step{margin:24px 0}.num{display:inline-block;width:24px;height:24px;background:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:13px;font-weight:700;margin-right:8px}
-a.btn{display:inline-block;padding:10px 18px;background:#fff;border:1px solid #dadce0;border-radius:8px;text-decoration:none;color:#3c4043;font-weight:500;margin-top:8px}
-a.btn:hover{background:#f8f9fa}</style></head>
-<body>
-<h1>✅ Setup complete</h1>
-
-<div class="step">
-  <p><span class="num">1</span><strong>Connect your Google account</strong></p>
-  <a class="btn" href="${googleUrl}">
-    <svg width="16" height="16" viewBox="0 0 18 18" style="vertical-align:middle;margin-right:8px" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.705 17.64 9.2z"/>
-      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-      <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
-      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-    </svg>
-    Sign in with Google
-  </a>
-</div>
-
-<div class="step">
-  <p><span class="num">2</span><strong>Add this MCP URL to Claude</strong></p>
-  <div class="box">
-    <p style="margin:0 0 8px;font-size:13px;color:#64748b">Your personal MCP URL — keep this private:</p>
-    <code>${mcpUrl}</code>
-  </div>
-  <p style="font-size:13px;color:#555"><strong>In Claude Desktop:</strong> Settings → Developer → Add MCP Server → paste the URL above.<br>
-  <strong>In Claude Cowork:</strong> + → Connectors → Add connector → Custom URL → paste the URL above.</p>
-</div>
-
-<div class="step">
-  <p><span class="num">3</span><strong>Start billing</strong> — say "Get my legal billing dashboard" in Claude.</p>
-</div>
-
-<p style="font-size:12px;color:#94a3b8;margin-top:40px">Your sheet URL: <code>${spreadsheet_url}</code></p>
-</body></html>`);
-});
-
-// Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0' }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Legal Billing MCP server listening on port ${PORT}`);
-  console.log(`Setup:        ${SERVER_URL}/setup`);
-  console.log(`MCP endpoint: ${SERVER_URL}/mcp?key={apiKey}`);
-  console.log(`OAuth redir:  ${REDIRECT_URI}`);
+  console.log(`Legal Billing MCP server  →  ${SERVER_URL}/mcp`);
+  console.log(`OAuth redirect URI        →  ${REDIRECT_URI}`);
 });
