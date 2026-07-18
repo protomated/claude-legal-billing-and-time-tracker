@@ -1,5 +1,7 @@
+import 'dotenv/config';
 import { OAuth2Client } from 'google-auth-library';
 import { getUser, saveUser } from './db.js';
+
 
 // Web application OAuth credentials — requires a separate OAuth client from the Desktop app
 // client used in plugin/server/auth.js. Create one at Google Cloud Console → Credentials →
