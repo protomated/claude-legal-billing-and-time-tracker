@@ -1,13 +1,10 @@
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const connectGoogleHtml = readFileSync(join(__dirname, 'connect-google.html'), 'utf8');
-const CONNECT_GOOGLE_URI = 'ui://legal-billing/connect-google';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -48,17 +45,14 @@ const TOOLS = [
   {
     name: 'connect_google',
     description:
-      'Show the Google connection UI, or re-authenticate when other tools return an auth error. ' +
-      'Call with check_only: true to verify status silently; call without arguments to open the sign-in panel. ' +
+      'Connect or re-authenticate Google. Returns a sign-in URL the attorney must open in their browser. ' +
+      'Call with check_only: true to silently check if already connected. ' +
       'Always call this first if another tool returns an auth error.',
     inputSchema: {
       type: 'object',
       properties: {
-        check_only: { type: 'boolean', description: 'If true, return status without opening the sign-in panel.' },
+        check_only: { type: 'boolean', description: 'If true, return connection status only.' },
       },
-    },
-    _meta: {
-      ui: { resourceUri: CONNECT_GOOGLE_URI },
     },
   },
   {
@@ -286,7 +280,6 @@ function createMCPServer(sessionIdRef) {
     const sub  = getSessionSub();
     const user = sub ? getUser(sub) : null;
     const base = [
-      { uri: CONNECT_GOOGLE_URI,    name: 'Connect Google',    description: 'Google account connection panel',                      mimeType: 'text/html;profile=mcp-app' },
       { uri: 'billing://dashboard', name: 'Billing Dashboard', description: 'Total hours, fees billed, collected, and outstanding', mimeType: 'application/json' },
       { uri: 'billing://clients',   name: 'Client List',       description: 'All clients with billable time entries',                mimeType: 'application/json' },
     ];
@@ -323,10 +316,6 @@ function createMCPServer(sessionIdRef) {
     const sub    = getSessionSub();
     const user   = sub ? getUser(sub) : null;
     const noData = (msg) => ({ contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ error: msg }) }] });
-
-    if (uri === CONNECT_GOOGLE_URI) {
-      return { contents: [{ uri, mimeType: 'text/html;profile=mcp-app', text: connectGoogleHtml }] };
-    }
 
     if (!user?.spreadsheetId) return noData('No spreadsheet configured.');
     const auth = await getAuthClient(sub);
