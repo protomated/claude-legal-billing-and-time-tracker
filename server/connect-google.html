@@ -247,10 +247,12 @@ async function signIn() {
       return;
     }
 
-    // Extract sign-in URL from response text and open in new tab.
-    const urlMatch = result.match(/(https?:\/\/\S+)/);
-    if (urlMatch) {
-      window.open(urlMatch[1], '_blank');
+    // Extract sign-in URL — handles bare URL or markdown [text](url) format.
+    const mdMatch  = result.match(/\((https?:\/\/[^)]+)\)/);
+    const urlMatch = mdMatch || result.match(/(https?:\/\/[^\s)\]]+)/);
+    const signInUrl = urlMatch ? urlMatch[1] : null;
+    if (signInUrl) {
+      window.open(signInUrl, '_blank');
       startPolling();
     } else {
       throw new Error('Unexpected response from connect_google.');

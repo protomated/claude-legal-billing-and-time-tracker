@@ -219,16 +219,22 @@ function createMCPServer(sessionIdRef) {
     try {
       // ── connect_google ──────────────────────────────────────────────────
       if (name === 'connect_google') {
-        if (args.check_only) {
-          return text(sub && user?.tokens ? 'connected' : 'not_connected');
-        }
         const sessionId = sessionIdRef.current;
+        const connectUrl = sessionId ? `${SERVER_URL}/connect?s=${sessionId}` : null;
+
+        if (args.check_only) {
+          if (sub && user?.tokens) return text('connected');
+          return {
+            content: [{ type: 'text', text: connectUrl
+              ? `not_connected — [Sign in with Google →](${connectUrl})`
+              : 'not_connected'
+            }],
+          };
+        }
+
         if (!sessionId) return err('Session not ready. Try again.');
-        const connectUrl = `${SERVER_URL}/connect?s=${sessionId}`;
         return {
-          content: [
-            { type: 'text', text: `[Sign in with Google →](${connectUrl})` },
-          ],
+          content: [{ type: 'text', text: `[Sign in with Google →](${connectUrl})` }],
         };
       }
 
