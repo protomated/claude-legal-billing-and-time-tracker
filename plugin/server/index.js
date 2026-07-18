@@ -12,7 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { getAuthClient, authenticate } from './auth.js';
 import { loadTokens } from './config.js';
-import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, listClients, getClientSummary } from './sheets.js';
+import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary } from './sheets.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const connectGoogleHtml = readFileSync(join(__dirname, 'ui', 'connect-google.html'), 'utf8');
@@ -122,6 +122,22 @@ const TOOLS = [
     description: 'Read the Dashboard tab and return the billing summary (total hours, fees billed, collected, unpaid).',
     inputSchema: { type: 'object', properties: {} },
   },
+  {
+    name: 'get_time_entries',
+    description: 'Read time entries from the Time Tracker tab. Use this when the attorney asks to see, list, or review logged hours. Optionally filter by client or billing status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        clientName: { type: 'string', description: 'Filter by client name (partial match, case-insensitive).' },
+        status: {
+          type: 'string',
+          enum: ['Unbilled', 'Billed', 'Paid', 'All'],
+          description: 'Filter by billing status. Defaults to All.',
+        },
+        limit: { type: 'number', description: 'Max entries to return (default 50, most recent first).' },
+      },
+    },
+  },
 ];
 
 const server = new Server(
@@ -170,8 +186,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'mark_billed':    return text(JSON.stringify(await markBilled(auth, spreadsheetId, args.clientName)));
       case 'mark_paid':      return text(JSON.stringify(await markPaid(auth, spreadsheetId, args.clientName)));
       case 'add_trust_entry':return text(JSON.stringify(await addTrustEntry(auth, spreadsheetId, args)));
-      case 'get_dashboard':  return text(JSON.stringify(await getDashboard(auth, spreadsheetId)));
-      default:               return err(`Unknown tool: ${name}`);
+      case 'get_dashboard':    return text(JSON.stringify(await getDashboard(auth, spreadsheetId)));
+      case 'get_time_entries': return text(JSON.stringify(await getTimeEntries(auth, spreadsheetId, args)));
+      default:                 return err(`Unknown tool: ${name}`);
     }
   } catch (e) {
     if (e.message?.includes('invalid_grant') || e.message?.includes('Token has been expired')) {

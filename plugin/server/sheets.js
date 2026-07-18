@@ -140,6 +140,40 @@ export async function getDashboard(auth, spreadsheetId) {
   };
 }
 
+export async function getTimeEntries(auth, spreadsheetId, { clientName, status, limit = 50 } = {}) {
+  const res = await sheetsClient(auth).spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${TIME_TRACKER}'!A:J`,
+  });
+
+  const rows = res.data.values ?? [];
+  let entries = rows.slice(1)
+    .filter(r => r[0])
+    .map(r => ({
+      date:        r[0]  ?? '',
+      client:      r[1]  ?? '',
+      matter:      r[2]  ?? '',
+      type:        r[3]  ?? '',
+      description: r[4]  ?? '',
+      hours:       parseFloat(r[5]) || 0,
+      rate:        parseFloat(r[6]) || 0,
+      total:       parseFloat(r[7]) || (parseFloat(r[5]) * parseFloat(r[6])) || 0,
+      status:      r[8]  ?? '',
+      invoiceDate: r[9]  ?? '',
+    }));
+
+  if (clientName) {
+    const lower = clientName.toLowerCase();
+    entries = entries.filter(e => e.client.toLowerCase().includes(lower));
+  }
+  if (status && status !== 'All') {
+    entries = entries.filter(e => e.status === status);
+  }
+
+  entries = entries.reverse().slice(0, limit);
+  return { success: true, count: entries.length, entries };
+}
+
 export async function listClients(auth, spreadsheetId) {
   const res = await sheetsClient(auth).spreadsheets.values.get({
     spreadsheetId,
