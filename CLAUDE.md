@@ -96,9 +96,9 @@ MCP server (Node.js, local) → Google Sheets API → attorney's Google Sheet
 
 ## Sheet column layout
 
-**Time Tracker** (A–J): Date | Client Name | Matter Name | Matter Type | Description | Hours | Rate | Total Fee (formula) | Status | Invoice Date
+**Time Tracker** (A–K): Date | Client Name | Matter Name | Matter Type | Description of Work | Hours Worked | Hourly Rate ($) | Total Fee (formula) | Invoice Status | Date Invoiced | Date Paid
 
-**Trust Account** (A–G): Date | Client Name | Matter Name | Description | Deposit | Withdrawal | Running Balance (formula)
+**Trust Account** (A–I): Date | Client Name | Matter Name | Description | Deposits (+) | Withdrawals (-) | Running Balance (formula) | Bank Statement Balance | Difference
 
 **Dashboard** (A–B): Label | Value (read-only; auto-calculated formulas)
 

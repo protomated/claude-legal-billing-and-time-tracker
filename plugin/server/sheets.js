@@ -82,9 +82,10 @@ export async function markPaid(auth, spreadsheetId, clientName) {
   const clientLower = clientName.toLowerCase();
   const updates = [];
 
+  const today = new Date().toISOString().split('T')[0];
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][1]?.toLowerCase() === clientLower && rows[i][8] === 'Billed') {
-      updates.push({ range: `'${TIME_TRACKER}'!I${i + 1}`, values: [['Paid']] });
+      updates.push({ range: `'${TIME_TRACKER}'!I${i + 1}:K${i + 1}`, values: [['Paid', rows[i][9] ?? '', today]] });
     }
   }
 
@@ -161,6 +162,7 @@ export async function getTimeEntries(auth, spreadsheetId, { clientName, status, 
       total:       parseFloat(r[7]) || (parseFloat(r[5]) * parseFloat(r[6])) || 0,
       status:      r[8]  ?? '',
       invoiceDate: r[9]  ?? '',
+      datePaid:    r[10] ?? '',
     }));
 
   if (clientName) {
