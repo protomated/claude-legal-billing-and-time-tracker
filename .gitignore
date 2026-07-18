@@ -143,4 +143,8 @@ vite.config.ts.timestamp-*
 .vite/
 *.zip
 *.zip.sha256
+*.mcpb
+*.mcpb.sha256
 .mcp.json
+plugin/node_modules/
+plugin/package-lock.json

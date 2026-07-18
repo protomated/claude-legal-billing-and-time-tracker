@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --surface: #26263a;
+    --border: #38385a;
+    --text: #e2e2f0;
+    --muted: #7a7a9a;
+    --green: #4ade80;
+    --green-bg: rgba(74, 222, 128, 0.08);
+    --green-border: rgba(74, 222, 128, 0.25);
+    --blue: #4285f4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .header-text { flex: 1; }
+  .header-title { font-size: 14px; font-weight: 600; }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .desc { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 22px; }
+
+  /* Buttons */
+  .btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: #fff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+  .btn-google:hover:not(:disabled) { background: #f8f9fa; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+  .btn-google:disabled { opacity: 0.55; cursor: wait; }
+  .btn-connected {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid var(--green-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .btn-text {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    background: none;
+    color: var(--muted);
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+  }
+  .btn-text:hover { color: var(--text); }
+
+  .status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    min-height: 16px;
+  }
+  .status.error { color: #f87171; }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 2px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="icon">⚖</div>
+    <div class="header-text">
+      <div class="header-title">Legal Billing</div>
+      <div class="header-sub">by Protomated</div>
+    </div>
+  </div>
+
+  <h3>Google Sheets Connection</h3>
+  <p class="desc">Sign in to allow Legal Billing to read and write your billing sheet. Your data stays in your own Google Drive — nothing passes through Protomated's servers.</p>
+
+  <!-- loading -->
+  <div id="s-loading">
+    <div class="btn-connected"><span class="spinner"></span> Checking connection...</div>
+  </div>
+
+  <!-- disconnected -->
+  <div id="s-disconnected" class="hidden">
+    <button class="btn-google" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.705 17.64 9.2z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+        <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
+        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div class="status" id="err-msg"></div>
+  </div>
+
+  <!-- signing in -->
+  <div id="s-signingin" class="hidden">
+    <button class="btn-google" disabled>
+      <span class="spinner"></span>
+      Opening browser...
+    </button>
+    <div class="status">Sign in to Google in the browser window that just opened, then return here.</div>
+  </div>
+
+  <!-- connected -->
+  <div id="s-connected" class="hidden">
+    <div class="btn-connected">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="8" r="6.5" stroke="#4ade80" stroke-width="1.5"/>
+        <path d="M5.5 8.5l1.75 1.75 3.25-3.5" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Connected to Google
+    </div>
+    <button class="btn-text" onclick="reconnect()">Reconnect a different account</button>
+  </div>
+</div>
+
+<script>
+let nextId = 1;
+const pending = {};
+
+window.addEventListener('message', (e) => {
+  const msg = e.data;
+  if (!msg || msg.jsonrpc !== '2.0') return;
+  if (msg.id != null && pending[msg.id]) {
+    const { resolve, reject } = pending[msg.id];
+    delete pending[msg.id];
+    msg.error ? reject(new Error(msg.error.message ?? JSON.stringify(msg.error))) : resolve(msg.result);
+  }
+});
+
+function request(method, params) {
+  const id = nextId++;
+  return new Promise((resolve, reject) => {
+    pending[id] = { resolve, reject };
+    window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+  });
+}
+
+function notify(method, params) {
+  window.parent.postMessage({ jsonrpc: '2.0', method, params }, '*');
+}
+
+async function callTool(name, args) {
+  const r = await request('tools/call', { name, arguments: args ?? {} });
+  return r?.content?.[0]?.text ?? '';
+}
+
+function show(state) {
+  for (const s of ['loading', 'disconnected', 'signingin', 'connected']) {
+    document.getElementById('s-' + s).classList.toggle('hidden', s !== state);
+  }
+}
+
+async function init() {
+  try {
+    await request('ui/initialize', {
+      protocolVersion: '2026-01-26',
+      capabilities: {},
+      clientInfo: { name: 'legal-billing-connect-ui', version: '1.0.0' },
+    });
+  } catch (_) {}
+
+  try {
+    const status = await callTool('connect_google', { check_only: true });
+    show(status === 'connected' ? 'connected' : 'disconnected');
+  } catch (_) {
+    show('disconnected');
+  }
+}
+
+async function signIn() {
+  document.getElementById('err-msg').textContent = '';
+  show('signingin');
+  try {
+    await callTool('connect_google', {});
+    show('connected');
+    notify('ui/message', { text: '✅ Google connected. Your billing tools are ready.' });
+  } catch (err) {
+    show('disconnected');
+    document.getElementById('err-msg').className = 'status error';
+    document.getElementById('err-msg').textContent = 'Sign-in failed or timed out. Please try again.';
+  }
+}
+
+function reconnect() {
+  document.getElementById('err-msg').textContent = '';
+  document.getElementById('err-msg').className = 'status';
+  show('disconnected');
+}
+
+init();
+</script>
+</body>
+</html>

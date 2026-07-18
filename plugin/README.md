@@ -1,104 +1,96 @@
-# AI Use Policy Generator for Law Firms — Claude Desktop Plugin
+# Legal Billing and Time Tracker
 
-A Claude Desktop plugin that conducts a short guided interview and drafts the three compliance documents every law firm using AI tools needs: an internal AI-use policy, a client-facing AI-disclosure clause for engagement letters, and a one-page safe AI checklist — tailored to your specific tools, practice areas, and jurisdiction.
+Log billable hours, generate invoices, manage trust accounts, and monitor
+revenue — all by chatting naturally in Claude Desktop. Your data lives in
+your own Google Sheet. No monthly subscription, no relay, no shared
+credentials.
 
 **Distributed by [Protomated](https://protomated.com) as a free download.**
 
 ---
 
-## ⚠️ Required: Read This Before You Install
+## ⚠️ Required: Read Before Installing
 
-**This section is not boilerplate. Read it before entering any firm information.**
-
-### 1. You must be on a qualifying Claude plan
-
-Do NOT use this plugin on a consumer Claude plan (claude.ai Personal or Claude Pro) to enter any confidential firm or client information. Consumer plans do not provide a Data Processing Agreement (DPA) covering privileged content.
-
-Use one of the following:
-
+### 1. Use a qualifying Claude plan
+Do not use this extension on a consumer Claude plan for client-related
+billing entries. Use:
 - **Claude for Work** (formerly Claude.ai Teams)
 - **Claude Team or Enterprise**
-- **Claude API** (with a signed DPA from Anthropic)
+- **Claude API** with a signed DPA from Anthropic
 
-Using a consumer plan with confidential firm information creates the same risk this plugin helps you address for your clients. See *Heppner v. Doe* (S.D.N.Y. Feb. 2026) and your state bar's AI ethics guidance.
+### 2. This is a billing tool — not a legal advice tool
+The extension handles time tracking, invoicing, and trust account
+bookkeeping only. It does not draft legal documents, interpret ethics
+rules, or provide legal advice. Trust/IOLTA entries follow standard
+three-way reconciliation structure — review them against your state
+bar's trust-accounting guidance before relying on them.
 
-> **If you're not sure which plan you're on:** Open Claude Desktop → Help → About. If it says "Claude Pro," you are on a consumer plan. Upgrade to Claude for Work before entering any confidential information into this plugin.
-
-### 2. The plugin produces starting drafts, not final documents
-
-Every document this plugin generates must be reviewed by you — a licensed attorney — before your firm adopts or distributes it. The generated policy references your state bar's guidance; it is your responsibility to verify that guidance and ensure the policy reflects it accurately.
-
-### 3. Every output requires your confirmation before saving
-
-The plugin will not write any file to your computer without asking for your explicit in-conversation confirmation first.
-
----
-
-## Installation (under 10 minutes)
-
-### Step 1 — Download and install
-
-1. Download `ai-use-policy-generator.zip` from the [Releases page](https://github.com/protomated/claude-ai-use-policy-generator/releases).
-2. Double-click the `.zip` file, or drag it into Claude Desktop's **Extensions** panel.
-3. Claude Desktop will install the plugin and prompt you to connect the required connector.
-
-### Step 2 — Connect Filesystem (your firm policies folder)
-
-1. Go to **Claude Desktop → Settings → Connectors**.
-2. Find **Filesystem** and click **Connect**.
-3. Select the folder where you want to save generated policy documents. Example: `~/Documents/Firm-Policies` or `~/Dropbox/Admin/Policies`.
-4. Only files inside this folder will be accessible to the plugin.
-
-> **Tip:** Create a dedicated `Firm-Policies` folder before connecting. The plugin will save the three generated documents there when you confirm.
-
-### Step 3 — Verify
-
-Open a new Claude Desktop chat. Type `/skills`. You should see `/ai-use-policy` listed. Run `/ai-use-policy` to start the guided interview.
-
-See [CONNECTORS.md](CONNECTORS.md) for troubleshooting.
+### 3. There is no undo
+If you log an entry incorrectly, correct that row directly in your
+Google Sheet. The extension has no delete or reverse operation.
 
 ---
 
-## The Skill
+## Installation (~3 minutes)
 
-### `/ai-use-policy` — AI Use Policy & Client-Disclosure Generator
+### Step 1 — Copy the Template Sheet
+1. Open the template: [[TEMPLATE_SHEET_URL]]
+2. Click **File → Make a copy** → save to your Google Drive
+3. Copy your sheet's URL from the browser
 
-Runs a guided interview covering your firm's AI tools, what data goes into them, your client types, and your jurisdiction. Then drafts three documents:
+### Step 2 — Install the Extension
+1. Open **Claude Desktop → Extensions → Add**
+2. Install `legal-billing.mcpb`
+3. When prompted, paste your sheet URL from Step 1
 
-**Document 1 — Internal AI-Use Policy (~2 pages)**
-Covers: approved tools and tier requirements, data classification rules (what can and can't go into AI tools), required engagement-letter disclosures, supervision and review requirements, staff training, prohibited uses, incident reporting, policy review schedule, and a state ethics compliance placeholder.
+### Step 3 — Connect Google
+In a new chat, say: **"connect Google"**
 
-**Document 2 — Client-Facing AI-Disclosure Clause**
-A ready-to-paste paragraph for your engagement letter. Discloses your firm's AI tool use, confirms attorney review of all AI output, and includes an optional client opt-out provision.
+A browser tab opens. Sign in and grant access to Google Spreadsheets.
+This happens once — tokens are saved locally.
 
-**Document 3 — Safe AI Checklist (1 page)**
-A print-and-post operational reference covering four checkpoints: before using AI on a matter, when entering content, when reviewing output, and before sending any AI-assisted document.
-
-**Consumer-grade tool flagging:** If the interview reveals that consumer-tier AI tools (ChatGPT Plus, personal Claude, free Copilot, etc.) are being used with client data, the plugin flags each one specifically and recommends the enterprise-tier alternative.
-
-```
-/ai-use-policy
-/ai-use-policy ~/Documents/Firm-Policies
-```
-
-**Interview time:** approximately 5–10 minutes.
-**Setup and install:** under 10 minutes.
+### Step 4 — Start Using
+Say anything like: "Log 2 hours for John Smith at $350."
 
 ---
 
-## Why Your Firm Needs This
+## What You Can Do
 
-57% of solo attorneys and 55% of small-firm attorneys use AI tools daily. Fewer than one in five has a written AI policy. The gap is a live bar-discipline and malpractice exposure: confidentiality obligations under Model Rule 1.6, competence obligations under Model Rule 1.1, and ABA Formal Opinion 512's informed-consent requirement all apply to AI tool use with client data — and they applied the day you started using the tool.
+- "Log 2 hours for John Smith on Smith v. Jones at $350 for drafting"
+- "Invoice John Smith for all unbilled work"
+- "John Smith paid his invoice"
+- "Add a $5,000 retainer deposit for Mary Lee on the Lee Estate matter"
+- "Withdraw $500 from Sarah's trust for a filing fee"
+- "Show me my billing dashboard"
+- "What's still unpaid?"
 
-This plugin closes the paperwork gap in under 10 minutes.
+**Sheet tabs written by this extension:**
+- Time Tracker — every time entry
+- Trust Account — deposits and withdrawals
+- Dashboard — live revenue summary (read-only; auto-calculated)
+- Rate My Matters — effective hourly rate on flat-fee matters
+- Year-End Summary — annual totals for your accountant
 
 ---
 
-## Want a Custom AI Policy Built for Your Firm?
+## Privacy
 
-The generated documents are a starting point. Protomated can build a custom AI governance package for your firm: tool-by-tool DPA review, jurisdiction-specific ethics-rule mapping, staff training materials, and a policy maintenance workflow — $3,000–$6,000 depending on scope.
+Your billing data stays in your own Google Sheet on your own Google
+Drive. The extension writes directly from your machine to your sheet
+using your own Google account — no data passes through Protomated's
+servers.
 
-[Book a 30-minute call →](https://protomated.com/call)
+---
+
+## Want a Custom Billing Build?
+
+This tool handles ~20 active matters cleanly. For automated time capture
+from calendar events, QuickBooks sync, LawPay integration, and a full
+client portal:
+
+[Book a call at protomated.com →](https://protomated.com/call)
+
+Build range: $5,000–$15,000 | Delivery: 2–3 weeks
 
 ---
 
@@ -108,4 +100,4 @@ MIT. See [LICENSE](LICENSE).
 
 ## Feedback and Issues
 
-[GitHub Issues](https://github.com/protomated/claude-ai-use-policy-generator/issues) | [hello@protomated.com](mailto:hello@protomated.com)
+[GitHub Issues](https://github.com/protomated/claude-legal-billing-and-time-tracker/issues) | [hello@protomated.com](mailto:hello@protomated.com)

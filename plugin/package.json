@@ -1,0 +1,12 @@
+{
+  "name": "legal-billing-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^144.0.0",
+    "open": "^10.1.0"
+  }
+}

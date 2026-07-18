@@ -30,7 +30,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create ${{ github.ref_name }} \
-            ai-use-policy-generator-v${{ steps.version.outputs.VERSION }}.zip \
-            ai-use-policy-generator-v${{ steps.version.outputs.VERSION }}.zip.sha256 \
-            --title "AI Use Policy Generator ${{ github.ref_name }}" \
+            legal-billing-time-tracker-v${{ steps.version.outputs.VERSION }}.mcpb \
+            legal-billing-time-tracker-v${{ steps.version.outputs.VERSION }}.mcpb.sha256 \
+            --title "Legal Billing and Time Tracker ${{ github.ref_name }}" \
             --notes-file RELEASE.md

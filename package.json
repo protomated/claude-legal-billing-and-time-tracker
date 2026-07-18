@@ -1,21 +1,16 @@
 {
-  "name": "ai-use-policy-generator",
+  "name": "legal-billing-time-tracker",
   "version": "1.0.0",
-  "description": "AI Use Policy Generator — Claude Desktop plugin that drafts an internal AI-use policy, client-facing disclosure clause, and safe AI checklist for solo law firms",
+  "description": "Legal Billing and Time Tracker — Claude Desktop extension for solo attorneys to track time, generate invoices, and manage trust accounts via natural conversation",
   "private": true,
   "scripts": {
     "validate": "node scripts/validate-plugin.mjs plugin",
-    "pack": "rm -f /tmp/ai-use-policy-generator.zip && (cd plugin && zip -r /tmp/ai-use-policy-generator.zip . -x '*.DS_Store' 'node_modules/*' '*/node_modules/*' 'package-lock.json') && mv /tmp/ai-use-policy-generator.zip ./ai-use-policy-generator-v$npm_package_version.zip",
-    "checksum": "sha256sum ai-use-policy-generator-v$npm_package_version.zip | tee ai-use-policy-generator-v$npm_package_version.zip.sha256",
-    "deploy:artifact": "mkdir -p site/public/downloads && cp ai-use-policy-generator-v$npm_package_version.zip site/public/downloads/ai-use-policy-generator.zip",
-    "build": "npm run validate && npm run pack && npm run checksum && npm run deploy:artifact",
-    "release": "npm run build && gh release create v$npm_package_version ai-use-policy-generator-v$npm_package_version.zip ai-use-policy-generator-v$npm_package_version.zip.sha256 --title \"v$npm_package_version\" --notes-file RELEASE.md",
-    "clean": "rm -f ./*.zip ./*.zip.sha256",
-    "tree": "find plugin -type f -not -path '*/node_modules/*' | sort",
-    "site:install": "npm install --prefix site",
-    "site:dev": "npm run dev --prefix site",
-    "site:build": "npm run build --prefix site",
-    "site:preview": "npm run preview --prefix site",
-    "site:deploy": "npm run deploy --prefix site"
+    "install:server": "npm install --prefix plugin --production --silent",
+    "pack": "npm run install:server && rm -f /tmp/legal-billing-time-tracker.zip && (cd plugin && zip -r /tmp/legal-billing-time-tracker.zip . -x '*.DS_Store' '*/node_modules/.cache/*' 'package-lock.json') && mv /tmp/legal-billing-time-tracker.zip ./legal-billing-time-tracker-v$npm_package_version.mcpb",
+    "checksum": "sha256sum legal-billing-time-tracker-v$npm_package_version.mcpb | tee legal-billing-time-tracker-v$npm_package_version.mcpb.sha256",
+    "build": "npm run validate && npm run pack && npm run checksum",
+    "release": "npm run build && gh release create v$npm_package_version legal-billing-time-tracker-v$npm_package_version.mcpb legal-billing-time-tracker-v$npm_package_version.mcpb.sha256 --title \"v$npm_package_version\" --notes-file RELEASE.md",
+    "clean": "rm -f ./*.mcpb ./*.mcpb.sha256",
+    "tree": "find plugin -type f -not -path '*/node_modules/*' | sort"
   }
 }
