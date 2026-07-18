@@ -30,10 +30,10 @@ const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.POR
 // embedding it inline in a tool response causes Claude to render raw HTML source.
 function notConnectedResponse(sessionId) {
   const connectUrl = sessionId ? `${SERVER_URL}/connect?s=${sessionId}` : null;
-  const text = connectUrl
-    ? `Google not connected. [Sign in with Google →](${connectUrl})`
+  const msg = connectUrl
+    ? `Google not connected. Sign in here: ${connectUrl}`
     : 'Google not connected. Ask me to "connect Google".';
-  return { content: [{ type: 'text', text }], isError: true };
+  return { content: [{ type: 'text', text: msg }], isError: true };
 }
 
 // ── In-memory session store: sessionId → Google sub ─────────────────────────
@@ -224,18 +224,11 @@ function createMCPServer(sessionIdRef) {
 
         if (args.check_only) {
           if (sub && user?.tokens) return text('connected');
-          return {
-            content: [{ type: 'text', text: connectUrl
-              ? `not_connected — [Sign in with Google →](${connectUrl})`
-              : 'not_connected'
-            }],
-          };
+          return text(connectUrl ? `not_connected ${connectUrl}` : 'not_connected');
         }
 
         if (!sessionId) return err('Session not ready. Try again.');
-        return {
-          content: [{ type: 'text', text: `[Sign in with Google →](${connectUrl})` }],
-        };
+        return text(connectUrl);
       }
 
       // ── set_spreadsheet_url ─────────────────────────────────────────────
