@@ -25,31 +25,15 @@ const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.POR
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-// Returns both an HTML panel (renders in Claude Desktop Chat) and a short
-// connect URL (fallback for Cowork / environments that don't render HTML).
+// Returns a clickable sign-in link. The panel (text/html;profile=mcp-app) is
+// served via ReadResource and triggered by _meta.ui.resourceUri on the tool —
+// embedding it inline in a tool response causes Claude to render raw HTML source.
 function notConnectedResponse(sessionId) {
   const connectUrl = sessionId ? `${SERVER_URL}/connect?s=${sessionId}` : null;
-  const content = [];
-
-  if (connectUrl) {
-    content.push({
-      type: 'text',
-      text: `Google not connected. Sign in to continue:\n${connectUrl}`,
-    });
-  } else {
-    content.push({ type: 'text', text: 'Google not connected. Ask me to "connect Google".' });
-  }
-
-  content.push({
-    type: 'resource',
-    resource: {
-      uri: CONNECT_GOOGLE_URI,
-      mimeType: 'text/html;profile=mcp-app',
-      text: connectGoogleHtml,
-    },
-  });
-
-  return { content, isError: true };
+  const text = connectUrl
+    ? `Google not connected. [Sign in with Google →](${connectUrl})`
+    : 'Google not connected. Ask me to "connect Google".';
+  return { content: [{ type: 'text', text }], isError: true };
 }
 
 // ── In-memory session store: sessionId → Google sub ─────────────────────────
@@ -243,8 +227,7 @@ function createMCPServer(sessionIdRef) {
         const connectUrl = `${SERVER_URL}/connect?s=${sessionId}`;
         return {
           content: [
-            { type: 'text', text: `Sign in with Google to connect your billing sheet:\n${connectUrl}` },
-            { type: 'resource', resource: { uri: CONNECT_GOOGLE_URI, mimeType: 'text/html;profile=mcp-app', text: connectGoogleHtml } },
+            { type: 'text', text: `[Sign in with Google →](${connectUrl})` },
           ],
         };
       }

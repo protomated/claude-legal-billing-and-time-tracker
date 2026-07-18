@@ -247,10 +247,10 @@ async function signIn() {
       return;
     }
 
-    // Extract OAuth URL from response text and open in new tab.
-    const urlMatch = result.match(/https:\/\/accounts\.google\.com\/[^\s\n]+/);
+    // Extract sign-in URL from response text and open in new tab.
+    const urlMatch = result.match(/(https?:\/\/\S+)/);
     if (urlMatch) {
-      window.open(urlMatch[0], '_blank');
+      window.open(urlMatch[1], '_blank');
       startPolling();
     } else {
       throw new Error('Unexpected response from connect_google.');
