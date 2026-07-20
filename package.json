@@ -12,7 +12,7 @@
     "release": "npm run build && gh release create v$npm_package_version legal-billing-time-tracker-v$npm_package_version.mcpb legal-billing-time-tracker-v$npm_package_version.mcpb.sha256 --title \"v$npm_package_version\" --notes-file RELEASE.md",
     "clean": "rm -f ./*.mcpb ./*.mcpb.sha256 ./*.plugin",
     "tree": "find plugin -type f -not -path '*/node_modules/*' | sort",
-    "pack:cowork": "rm -f ./legal-billing.plugin && (cd cowork-plugin && zip -r ../legal-billing.plugin . -x '*.DS_Store') && echo \"Built legal-billing.plugin ($(du -sh ./legal-billing.plugin | cut -f1))\"",
+    "pack:cowork": "rm -f ./legal-billing.zip && (cd cowork-plugin && zip -r ../legal-billing.zip . -x '*.DS_Store') && echo \"Built legal-billing.zip ($(du -sh ../legal-billing.zip | cut -f1))\"",
     "build:cowork": "npm run pack:cowork"
   }
 }

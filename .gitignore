@@ -154,3 +154,4 @@ plugin/package-lock.json
 *.mcpb
 *.mcpb.sha256
 legal-billing.plugin
+legal-billing.zip

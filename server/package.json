@@ -1,0 +1,17 @@
+{
+  "name": "legal-billing-http-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.21.0",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^144.0.0",
+    "pg": "^8.13.0"
+  }
+}
