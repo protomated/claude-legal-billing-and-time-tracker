@@ -4,13 +4,9 @@
   "description": "Legal Billing and Time Tracker — Claude Desktop extension for solo attorneys to track time, generate invoices, and manage trust accounts via natural conversation",
   "private": true,
   "scripts": {
-    "validate": "node scripts/validate-plugin.mjs plugin",
-    "install:server": "npm install --prefix plugin --production --silent",
-    "pack": "npm run install:server && rm -f /tmp/legal-billing-time-tracker.zip && (cd plugin && zip -r /tmp/legal-billing-time-tracker.zip . -x '*.DS_Store' '*/node_modules/.cache/*' 'package-lock.json') && mv /tmp/legal-billing-time-tracker.zip ./legal-billing-time-tracker-v$npm_package_version.mcpb",
-    "checksum": "sha256sum legal-billing-time-tracker-v$npm_package_version.mcpb | tee legal-billing-time-tracker-v$npm_package_version.mcpb.sha256",
-    "build": "npm run validate && npm run pack && npm run checksum",
-    "release": "npm run build && gh release create v$npm_package_version legal-billing-time-tracker-v$npm_package_version.mcpb legal-billing-time-tracker-v$npm_package_version.mcpb.sha256 --title \"v$npm_package_version\" --notes-file RELEASE.md",
-    "clean": "rm -f ./*.mcpb ./*.mcpb.sha256",
-    "tree": "find plugin -type f -not -path '*/node_modules/*' | sort"
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
   }
 }

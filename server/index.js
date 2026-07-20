@@ -13,6 +13,8 @@ import {
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { initDb, getUser, saveUser, findSingleUser } from './db.js';
 import { getAuthUrl, getAuthClient, handleOAuthCallback, REDIRECT_URI } from './auth.js';
@@ -188,12 +190,112 @@ const TOOLS = [
   },
 ];
 
+// ── Prompt definitions (slash commands) ──────────────────────────────────────
+
+const PROMPTS = [
+  {
+    name: 'log-time',
+    description: 'Log billable time — guides you through client, matter, hours, and rate, then writes the entry.',
+    arguments: [{ name: 'entry', description: 'Optional shorthand, e.g. "2.5h drafting motion for Smith"', required: false }],
+  },
+  {
+    name: 'billing-review',
+    description: 'Weekly billing health check — who has unbilled hours, who hasn\'t paid, what to do next.',
+    arguments: [{ name: 'client', description: 'Optional: focus on a single client', required: false }],
+  },
+  {
+    name: 'invoice-client',
+    description: 'Generate an invoice — shows unbilled entries, confirms, marks as Billed, previews the invoice.',
+    arguments: [{ name: 'client', description: 'Client name to invoice', required: false }],
+  },
+  {
+    name: 'trust-entry',
+    description: 'Record a trust account deposit or withdrawal with a safety check before writing.',
+    arguments: [{ name: 'entry', description: 'Optional shorthand, e.g. "Smith deposit 5000" or "Garcia filing fee 350"', required: false }],
+  },
+];
+
+function getPromptMessages(name, args = {}) {
+  const msg = (text) => ({ role: 'user', content: { type: 'text', text } });
+  switch (name) {
+    case 'log-time': {
+      const hint = args.entry ? `\n\nThe attorney provided this shorthand: "${args.entry}" — extract what you can from it.` : '';
+      return [msg(
+        `Log a billable time entry to the Time Tracker.${hint}\n\n` +
+        `Collect these fields, asking only for what's missing:\n` +
+        `- Client name (required)\n` +
+        `- Hours (required; decimal OK; never zero or negative)\n` +
+        `- Hourly rate (required; ask "What's your rate for this client?" if missing)\n` +
+        `- Date (required; default to today)\n` +
+        `- Description of work (recommended)\n` +
+        `- Matter name (optional)\n` +
+        `- Matter type (optional; if needed use exactly one of: Litigation, Family Law, Estate, Criminal, Corporate, Immigration, Real Estate, Small Business)\n\n` +
+        `Before calling log_time, confirm in one line: "Logging X hrs for [Client] on [date] at $Y/hr = $Z. Description: [desc]. Correct?" and wait.\n\n` +
+        `After success report: "✅ Logged: X hrs for [Client] at $Y/hr — $Z total. Status: Unbilled."\n` +
+        `⚠️ Not legal advice — review before sending to client.`
+      )];
+    }
+    case 'billing-review': {
+      const hint = args.client ? `\n\nFocus on client: "${args.client}". Also call get_client_summary for them.` : '';
+      return [msg(
+        `Run a billing health check. This is read-only — no changes.${hint}\n\n` +
+        `Call these in parallel:\n` +
+        `- get_dashboard (overall totals)\n` +
+        `- get_time_entries with status "Unbilled" (who needs invoicing)\n` +
+        `- get_time_entries with status "Billed" (outstanding invoices)\n\n` +
+        `Present the results as:\n` +
+        `**Billing Snapshot — [today's date]**\n` +
+        `Overall: total hours, fees billed, collected, outstanding.\n` +
+        `🔴 Unbilled — list each client with unbilled hours and estimated fees.\n` +
+        `🟡 Billed — list each client with outstanding invoice amount and date.\n` +
+        `💡 Actions — who to bill now; who to follow up with (invoices older than 30 days).\n\n` +
+        `End with: "Want me to generate an invoice for any of these clients?"\n` +
+        `⚠️ Not legal advice — review before sending to client.`
+      )];
+    }
+    case 'invoice-client': {
+      const clientHint = args.client ? `Client: "${args.client}".` : 'Ask which client to invoice if not already clear from context.';
+      return [msg(
+        `Generate an invoice for a client. ${clientHint}\n\n` +
+        `1. Call get_time_entries filtered by the client and status "Unbilled".\n` +
+        `   If none found: "No unbilled entries for [Client]." Stop.\n\n` +
+        `2. Show the entries as a table (Date | Matter | Description | Hours | Rate | Amount) with a Total row.\n\n` +
+        `3. Confirm: "I will mark [N] entries for [Client] as Billed and set today as the invoice date. Total: $X. Shall I proceed?"\n` +
+        `   Wait for explicit confirmation before calling mark_billed.\n\n` +
+        `4. Call mark_billed. Report: "✅ Invoice generated — [N] entries marked Billed. Invoice date: [today]."\n\n` +
+        `5. Call get_invoice and present the invoice data for review.\n\n` +
+        `6. Offer: "Would you like to record a payment once the client pays?"\n` +
+        `⚠️ Not legal advice — review before sending to client.`
+      )];
+    }
+    case 'trust-entry': {
+      const hint = args.entry ? `\n\nThe attorney provided: "${args.entry}" — extract what you can.` : '';
+      return [msg(
+        `Record a trust account transaction.${hint}\n\n` +
+        `Safety rules (enforce every time):\n` +
+        `- Never put a withdrawal in the deposit field or vice versa. Never use negative numbers.\n` +
+        `- No $0 amounts — if the amount is zero or unclear, stop and ask.\n` +
+        `- Withdrawal over $10,000: state the full details and ask for explicit confirmation before recording.\n\n` +
+        `Step 1 — Classify: deposit (retainer, advance, funds in) or withdrawal (filing fee, disbursement, refund, funds out).\n` +
+        `Step 2 — Collect: client name, amount (positive), type, date (default today), description, matter name (optional).\n` +
+        `Step 3 — For withdrawals over $10,000: "⚠️ This records a $X withdrawal from trust for [Client] — [desc]. Confirm?" Wait.\n` +
+        `Step 4 — Confirm: "Recording a $X [deposit/withdrawal] for [Client] on [date]. Description: [desc]. Correct?" Wait.\n` +
+        `Step 5 — Call add_trust_entry. Set deposit OR withdrawal to the amount; the other is 0.\n` +
+        `Report: "✅ Trust [deposit/withdrawal] recorded — $X for [Client]."\n` +
+        `⚠️ Not legal advice — review against your state bar's trust-accounting rules.`
+      )];
+    }
+    default:
+      throw new Error(`Unknown prompt: ${name}`);
+  }
+}
+
 // ── MCP server factory ───────────────────────────────────────────────────────
 
 function createMCPServer(sessionIdRef) {
   const server = new Server(
     { name: 'legal-billing', version: '1.0.0' },
-    { capabilities: { tools: {}, resources: {} } }
+    { capabilities: { tools: {}, resources: {}, prompts: {} } }
   );
 
   const text = (t) => ({ content: [{ type: 'text', text: String(t) }] });
@@ -280,6 +382,17 @@ function createMCPServer(sessionIdRef) {
       }
       return err(`Error: ${e.message}`);
     }
+  });
+
+  // ── Prompts (slash commands) ───────────────────────────────────────────────
+
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: PROMPTS }));
+
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const { name, arguments: args = {} } = request.params;
+    const prompt = PROMPTS.find(p => p.name === name);
+    if (!prompt) throw new Error(`Unknown prompt: ${name}`);
+    return { description: prompt.description, messages: getPromptMessages(name, args) };
   });
 
   // ── Resources ─────────────────────────────────────────────────────────────
