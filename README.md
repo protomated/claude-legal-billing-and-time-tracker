@@ -10,7 +10,7 @@ Distributed by [Protomated](https://protomated.com).
 
 ## What it does
 
-Attorneys connect this server as a custom connector in Claude.ai. They then log billable hours, generate invoices, manage trust accounts, and review revenue by chatting naturally. Data lives in the attorney's own Google Sheet.
+Attorneys connect this server as a custom connector in Claude.ai and Claude Desktop. They then log billable hours, generate invoices, manage trust accounts, and review revenue by chatting naturally. Data lives in the attorney's own Google Sheet.
 
 ---
 
