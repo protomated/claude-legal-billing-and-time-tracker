@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "install:server": "npm install --prefix server --production --silent",
-    "start": "node server/index.js",
+    "start": "npm run install:server && node server/index.js",
     "pack": "rm -f ./legal-billing.zip && (cd cowork-plugin && zip -r ../legal-billing.zip . -x '*.DS_Store') && echo \"Built legal-billing.zip ($(du -sh ../legal-billing.zip | cut -f1))\"",
     "clean": "rm -f ./*.zip"
   }
