@@ -1,39 +1,31 @@
-# Legal Billing and Time Tracker — Claude Desktop Extension
+# Legal Billing and Time Tracker — HTTP MCP Server
 
-Log billable hours, generate invoices, manage trust accounts, and monitor
-revenue — all by chatting naturally in Claude Desktop. Your data lives in
-your own Google Sheet. No monthly subscription, no relay, no shared
-credentials.
+Remote MCP server for the Legal Billing and Time Tracker. Exposes billing tools over HTTP so attorneys can use it as a Claude.ai Cowork connector — no local installation required.
 
-Distributed free by [Protomated](https://protomated.com).
+The `.mcpb` Claude Desktop extension is on the `main` branch.
+
+Distributed by [Protomated](https://protomated.com).
 
 ---
 
-## Installing the extension
+## What it does
 
-Download the latest `.mcpb` from [Releases](https://github.com/protomated/claude-legal-billing-and-time-tracker/releases) and install it in Claude Desktop → Extensions → Add. See [`plugin/README.md`](plugin/README.md) for full installation and compliance guidance.
+Attorneys connect this server as a custom connector in Claude.ai. They then log billable hours, generate invoices, manage trust accounts, and review revenue by chatting naturally. Data lives in the attorney's own Google Sheet.
 
 ---
 
 ## Repo layout
 
 ```
-plugin/           Installable extension (packaged into .mcpb)
-  manifest.json                MCPB manifest — server declaration + user_config
-  package.json                 Runtime dependencies
-  node_modules/                Bundled deps (generated at build time; gitignored)
-  server/
-    index.js                   MCP server entry — tool definitions + request handler
-    auth.js                    Google OAuth2 flow (local callback on port 8085)
-    sheets.js                  Google Sheets API operations
-    config.js                  Token persistence (~/.legal-billing/tokens.json)
-  README.md                    Attorney-facing setup guide
+server/
+  index.js              Express + StreamableHTTPServerTransport MCP server
+  auth.js               Google OAuth2 (web application flow)
+  db.js                 Postgres — users table, token + config storage
+  connect-google.html   OAuth callback landing page
 
-scripts/
-  validate-plugin.mjs          Validates MCPB structure before packing
-
-docs/
-  NTC-A-1.md, PAC-A-3.md      Engineer onboarding reference docs
+docker-compose.yml      Postgres service (port 54333)
+Dockerfile              Server image
+docs/                   Engineer onboarding reference docs
 ```
 
 ---
@@ -42,100 +34,105 @@ docs/
 
 | Tool | What it does |
 |---|---|
-| `connect_google` | Run the one-time Google OAuth flow |
-| `log_time` | Append a billable time entry to the Time Tracker tab |
+| `connect_google` | Return sign-in URL; initiate OAuth |
+| `set_spreadsheet_url` | Save the attorney's Google Sheet URL |
+| `log_time` | Append a billable time entry |
 | `mark_billed` | Mark all Unbilled entries for a client as Billed |
-| `mark_paid` | Mark all Billed entries for a client as Paid (confirmation required) |
+| `mark_paid` | Mark all Billed entries as Paid (confirmation required) |
 | `add_trust_entry` | Append a trust deposit or withdrawal |
-| `get_dashboard` | Read the Dashboard tab and return billing summary |
+| `get_dashboard` | Read billing summary from Dashboard tab |
+| `get_time_entries` | Read time entries; filter by client or status |
+| `get_trust_entries` | Read trust account activity; filter by client |
+| `get_year_end_summary` | Annual revenue totals |
+| `get_matter_profitability` | Matter profitability analysis (Rate My Matters tab) |
+| `get_invoice` | Current invoice preview |
+
+## MCP Prompts (slash commands)
+
+Available in Claude.ai as `/legal-billing:prompt-name`:
+
+| Prompt | What it does |
+|---|---|
+| `/legal-billing:log-time` | Guided time entry workflow |
+| `/legal-billing:billing-review` | Weekly billing health check |
+| `/legal-billing:invoice-client` | End-to-end invoice flow |
+| `/legal-billing:trust-entry` | Trust deposit/withdrawal with safety checks |
 
 ---
 
-## Development
+## Running locally
 
-### 1. Google OAuth credentials (required before running locally or publishing)
+### 1. Prerequisites
 
-The MCP server uses Google OAuth to write to attorneys' Google Sheets. You need a Google Cloud OAuth client configured for a desktop app.
+- Node.js 18+
+- Docker (for Postgres)
+- A Google Cloud project with the Sheets API enabled
 
-**Create the OAuth client:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
-2. Click **Create Credentials → OAuth client ID**
-3. Application type: **Desktop app**
-4. Name: `Legal Billing and Time Tracker` (or anything)
-5. Click **Create**
+### 2. Google OAuth credentials
 
-**Register the redirect URI:**
-In the created client, under "Authorized redirect URIs", add:
+Create a **Web application** OAuth client in [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
+
+Add this authorized redirect URI:
 ```
-http://localhost:8085/oauth/callback
+http://localhost:3000/oauth/callback
 ```
 
-**Enable the API:**
-Go to APIs & Services → Library → search "Google Sheets API" → Enable.
-
-**Add credentials to the server:**
-Open `plugin/server/auth.js` and replace the placeholders:
-```js
-const CLIENT_ID = '[GOOGLE_CLIENT_ID]';      // ← paste your Client ID
-const CLIENT_SECRET = '[GOOGLE_CLIENT_SECRET]'; // ← paste your Client Secret
-```
-
-> **Publishing note:** The Google Sheets scope (`spreadsheets`) is classified as sensitive. Before releasing to external users (anyone outside your Google Workspace), submit the OAuth app for [Google verification](https://support.google.com/cloud/answer/9110914). Until verified, users see an "unverified app" warning. Internal testing (yourself, your team) works without verification.
-
-### 2. Build and run
+### 3. Environment
 
 ```bash
-# Validate MCPB structure
-npm run validate
-
-# Full build: validate → install server deps → pack → SHA-256
-npm run build
-
-# Pack only (runs install:server first)
-npm run pack
-
-# Remove build artifacts
-npm run clean
-
-# List plugin files (excludes node_modules)
-npm run tree
+cp .env.example .env
 ```
+
+Fill in:
+```
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+SERVER_URL=http://localhost:3000
+DATABASE_URL=postgresql://user:pass@localhost:54333/legal_billing
+```
+
+### 4. Start
+
+```bash
+docker compose up -d postgres
+npm start
+```
+
+Server runs at `http://localhost:3000/mcp`.
+
+To expose it publicly for Cowork testing:
+```bash
+ngrok http 3000
+```
+
+Then set `SERVER_URL` to the ngrok HTTPS URL and restart.
+
+### 5. Add as a connector
+
+In Claude.ai → Settings → Connectors → Add custom connector → enter your server URL.
 
 ---
 
-## Cutting a release
+## Deployment
 
-Create or update `RELEASE.md` at the repo root, then push a semver tag:
+Set the same environment variables on your hosting platform and point `DATABASE_URL` at a managed Postgres instance. The `Dockerfile` builds a production image.
 
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-The release workflow validates, builds, checksums, and publishes a GitHub Release with the `.mcpb` and `.mcpb.sha256` attached.
+> **OAuth note:** The Google Sheets scope is classified as sensitive. Before releasing to external users, submit the OAuth app for [Google verification](https://support.google.com/cloud/answer/9110914).
 
 ---
 
 ## Compliance
 
-Non-negotiable constraints enforced in `plugin/server/index.js` tool descriptions:
+Non-negotiable constraints enforced in `server/index.js`:
 
-1. **Trust disclaimer** — every trust account output carries "Not legal advice — review against your state bar's trust-accounting rules."
-2. **Billing disclaimer** — every invoice and payment output carries "Not legal advice — review before sending to client."
+1. **Trust disclaimer** — every trust account output carries "⚠️ Not legal advice — review against your state bar's trust-accounting rules."
+2. **Billing disclaimer** — every invoice and payment output carries "⚠️ Not legal advice — review before sending to client."
 3. **No legal advice** — decline anything outside billing and time tracking.
 4. **markPaid confirmation gate** — state what will change and get explicit confirmation before calling `mark_paid`.
-5. **No undo** — no delete or reverse action; attorney corrects errors directly in the sheet.
-
-Do not weaken these constraints.
-
----
-
-## Contributing
-
-Open an issue or pull request. All changes to `plugin/server/index.js` tool descriptions that affect compliance behavior require a brief explanation of why the change does not weaken the constraints above.
+5. **No undo** — attorney corrects errors directly in the sheet.
 
 ---
 
 ## License
 
-MIT. See [LICENSE](plugin/LICENSE).
+MIT.
