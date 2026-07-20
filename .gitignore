@@ -146,5 +146,11 @@ vite.config.ts.timestamp-*
 *.mcpb
 *.mcpb.sha256
 .mcp.json
+!cowork-plugin/.mcp.json
 plugin/node_modules/
 plugin/package-lock.json
+
+# Built plugin artifacts
+*.mcpb
+*.mcpb.sha256
+legal-billing.plugin
