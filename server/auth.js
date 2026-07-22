@@ -10,6 +10,7 @@ const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '[WEB_GOOGLE_CLIENT_SE
 
 const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
   'openid',
   'email',
   'profile',

@@ -17,6 +17,8 @@ End-to-end invoice flow: show unbilled work, confirm, then mark as billed.
 
 ## Workflow
 
+**Step 0 — Confirm setup first:** Call `connect_google` with `check_only: true`. If not connected, stop and tell the attorney to say "connect Google" — do not ask for a client name yet. If connected, proceed; if the first data call below returns "No Google Sheet configured yet", stop and ask whether to create a new sheet from the template (`create_billing_sheet`, only after they confirm) or connect an existing one (`set_spreadsheet_url`). Only continue once both are confirmed. If you call create_billing_sheet, always paste the full sheet URL from its result into your reply — do not just say "sheet created."
+
 **Step 1 — Pull unbilled entries:**
 Call `get_time_entries` with `clientName` and `status: Unbilled`.
 

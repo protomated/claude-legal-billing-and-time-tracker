@@ -16,16 +16,13 @@ Track billable hours, generate invoices, manage trust accounts, and check revenu
 
 ---
 
-## Setup (one time, ~3 minutes)
+## Setup (one time, ~1 minute)
 
-**Step 1 — Copy the Google Sheet**
-Open the [Legal Billing and Time Tracker template](https://protomated.com/templates/legal-billing-time-tracker/), click **File → Make a copy**, and save it to your own Google Drive.
-
-**Step 2 — Install this plugin**
+**Step 1 — Install this plugin**
 In Claude Cowork: open the sidebar → Plugins → Add → upload `legal-billing.plugin`.
 
-**Step 3 — Connect on first use**
-Start a conversation and say anything like *"Log 1.5 hours for John Smith at $300"*. Claude will ask you to connect your Google account and paste your sheet URL — takes about 30 seconds. You'll never need to do it again.
+**Step 2 — Connect on first use**
+Start a conversation and say anything like *"Log 1.5 hours for John Smith at $300"*. Claude will ask you to connect your Google account, then offer to create your billing sheet automatically from the template — no manual copying needed. (Already have a sheet from an earlier setup? Just paste its URL instead.) Takes about 30 seconds. You'll never need to do it again.
 
 ---
 
@@ -55,6 +52,7 @@ Start a conversation and say anything like *"Log 1.5 hours for John Smith at $30
 
 - The trust/IOLTA tab follows standard three-way reconciliation structure (bookkeeping, not legal advice). Review all outputs against your state bar's trust accounting guidance.
 - There is no undo — correct errors directly in the Google Sheet.
+- Say "disconnect Google" to revoke access and clear your saved sheet reference, or "delete my account" to permanently remove your account record from Protomated's database. Neither touches your Google Sheet itself.
 - This plugin handles up to ~20 active matters cleanly. For automated calendar-based time capture, QuickBooks sync, or LawPay integration, [book a call](https://protomated.com).
 
 ---
@@ -62,3 +60,5 @@ Start a conversation and say anything like *"Log 1.5 hours for John Smith at $30
 ## Privacy
 
 Your billing data stays in your own Google Sheet. Protomated's server only processes tool calls; it does not store your spreadsheet data.
+
+When Claude creates your sheet automatically, it's built directly in your own Google Drive from Protomated's template file — you're the sole owner from the moment it's created, with no Protomated account ever attached to it.

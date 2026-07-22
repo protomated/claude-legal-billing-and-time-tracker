@@ -16,9 +16,10 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { initDb, getUser, saveUser, findSingleUser } from './db.js';
+import { initDb, getUser, saveUser, disconnectUser, deleteUser } from './db.js';
 import { getAuthUrl, getAuthClient, handleOAuthCallback, REDIRECT_URI } from './auth.js';
 import { logTime, markBilled, markPaid, addTrustEntry, getDashboard, getTimeEntries, listClients, getClientSummary, getTrustEntries, getYearEndSummary, getMatterProfitability, getInvoice } from './sheets.js';
+import { provisionAttorneySheet } from './drive.js';
 
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
 
@@ -69,6 +70,36 @@ const TOOLS = [
         url: { type: 'string', description: 'Full Google Sheets URL from the browser address bar.' },
       },
     },
+  },
+  {
+    name: 'create_billing_sheet',
+    description:
+      'Create a new Google Sheet for the attorney from the Legal Billing template and connect it. ' +
+      'IMPORTANT: Only call this after the attorney has explicitly confirmed they want a new sheet created ' +
+      '(e.g. you asked "I don\'t see a billing sheet on file — want me to create one from the template now, ' +
+      'or do you already have one to connect?" and they chose to create a new one). ' +
+      'If they already have a sheet, ask for its URL and call set_spreadsheet_url instead. ' +
+      'Do not call this tool speculatively or without asking first.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'disconnect_google',
+    description:
+      'Disconnect the attorney\'s Google account: revokes the OAuth token and clears the saved ' +
+      'spreadsheet reference from Protomated\'s server. The attorney will need to reconnect Google ' +
+      'and reconnect (or recreate) a billing sheet before using other tools again. ' +
+      'Does not delete or modify the Google Sheet itself — only Protomated\'s stored reference to it. ' +
+      'IMPORTANT: State what will happen and wait for explicit confirmation before calling.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'delete_account',
+    description:
+      'Permanently delete the attorney\'s account record from Protomated\'s database — tokens, email, ' +
+      'and spreadsheet reference. Does not delete or modify the Google Sheet itself, only Protomated\'s ' +
+      'stored reference to it. IMPORTANT: State exactly what will be deleted and wait for explicit ' +
+      'confirmation before calling. This cannot be undone.',
+    inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'log_time',
@@ -215,8 +246,20 @@ const PROMPTS = [
   },
 ];
 
+// Prepended to every slash-command prompt: don't collect any details until
+// connection + sheet setup is confirmed, so an attorney never fills in a
+// form's worth of fields before hitting a "connect Google" wall at the end.
+const SETUP_CHECK =
+  `Before doing anything else: call connect_google with check_only: true. ` +
+  `If not connected, stop and tell the attorney to say "connect Google" to get a sign-in link — do not collect any details yet. ` +
+  `If connected but the first tool call below returns "No Google Sheet configured yet", stop and ask: ` +
+  `"I don't see a billing sheet on file — want me to create one from the Legal Billing template now, or do you already have one to connect?" ` +
+  `Then call create_billing_sheet (only after they confirm a new sheet) or set_spreadsheet_url (if they give you an existing sheet's URL). ` +
+  `If you call create_billing_sheet, always paste the full sheet URL from its result into your reply — don't just say "sheet created," the attorney needs the clickable link. ` +
+  `Once both are confirmed, proceed with the task below.\n\n`;
+
 function getPromptMessages(name, args = {}) {
-  const msg = (text) => ({ role: 'user', content: { type: 'text', text } });
+  const msg = (text) => ({ role: 'user', content: { type: 'text', text: SETUP_CHECK + text } });
   switch (name) {
     case 'log-time': {
       const hint = args.entry ? `\n\nThe attorney provided this shorthand: "${args.entry}" — extract what you can from it.` : '';
@@ -303,14 +346,7 @@ function createMCPServer(sessionIdRef) {
 
   async function getSessionSub() {
     const sid = sessionIdRef.current;
-    if (sessions.has(sid)) return sessions.get(sid);
-
-    // Session was reset (server restart or MCP reconnect during OAuth).
-    // Recover by binding to the single stored user, if there is exactly one.
-    const sub = await findSingleUser();
-    if (sub) { sessions.set(sid, sub); return sub; }
-
-    return null;
+    return sessions.has(sid) ? sessions.get(sid) : null;
   }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
@@ -345,6 +381,57 @@ function createMCPServer(sessionIdRef) {
         return text('✅ Sheet saved. Your Legal Billing tools are ready — try "Get my billing dashboard".');
       }
 
+      // ── create_billing_sheet ─────────────────────────────────────────────
+      if (name === 'create_billing_sheet') {
+        if (!sub || !user?.tokens) return notConnectedResponse(sessionIdRef.current);
+        if (user.spreadsheetId) return text('You already have a billing sheet connected.');
+
+        const attorneyAuth = await getAuthClient(sub);
+        if (!attorneyAuth) return notConnectedResponse(sessionIdRef.current);
+
+        const { spreadsheetId, spreadsheetUrl } = await provisionAttorneySheet(attorneyAuth, user.email);
+        await saveUser(sub, { spreadsheetUrl, spreadsheetId });
+        return text(
+          `✅ Created your billing sheet: ${spreadsheetUrl}\n` +
+          'Bookmark it — that\'s where your data lives, fully owned by you. ' +
+          'Your Legal Billing tools are ready — try "Get my billing dashboard".'
+        );
+      }
+
+      // ── disconnect_google ────────────────────────────────────────────────
+      if (name === 'disconnect_google') {
+        if (!sub || !user) return text('You\'re not currently connected — nothing to disconnect.');
+        if (user.tokens) {
+          try {
+            const revokeAuth = await getAuthClient(sub);
+            if (revokeAuth) await revokeAuth.revokeCredentials();
+          } catch (e) { /* token may already be invalid — proceed with local cleanup regardless */ }
+        }
+        await disconnectUser(sub);
+        sessions.delete(sessionIdRef.current);
+        return text(
+          '✅ Disconnected. Your Google account and saved sheet reference have been cleared from Protomated. ' +
+          'Say "connect Google" any time to reconnect.'
+        );
+      }
+
+      // ── delete_account ───────────────────────────────────────────────────
+      if (name === 'delete_account') {
+        if (!sub || !user) return text('There\'s no account on file to delete.');
+        if (user.tokens) {
+          try {
+            const revokeAuth = await getAuthClient(sub);
+            if (revokeAuth) await revokeAuth.revokeCredentials();
+          } catch (e) { /* token may already be invalid — proceed with deletion regardless */ }
+        }
+        await deleteUser(sub);
+        sessions.delete(sessionIdRef.current);
+        return text(
+          '✅ Your account has been permanently deleted from Protomated\'s database. ' +
+          'Your Google Sheet itself was not touched — it remains in your Google Drive.'
+        );
+      }
+
       // ── All other tools require auth + sheet ────────────────────────────
       if (!sub || !user?.tokens) {
         return notConnectedResponse(sessionIdRef.current);
@@ -352,9 +439,10 @@ function createMCPServer(sessionIdRef) {
 
       if (!user.spreadsheetId) {
         return err(
-          'No Google Sheet configured yet. ' +
-          'Please share the URL of your billing sheet (copy it from the browser address bar while the sheet is open) ' +
-          'and I\'ll save it for you.'
+          'No Google Sheet configured yet. Ask the attorney: "I don\'t see a billing sheet on file — ' +
+          'want me to create one from the Legal Billing template now, or do you already have one to connect?" ' +
+          'If they want a new one, call create_billing_sheet. If they have an existing sheet, ask for its URL ' +
+          'and call set_spreadsheet_url.'
         );
       }
 

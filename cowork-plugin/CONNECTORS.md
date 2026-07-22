@@ -18,6 +18,8 @@ This plugin connects to the **Legal Billing MCP server** hosted by Protomated. T
 |---|---|
 | `connect_google` | Initiate Google OAuth and return the sign-in URL |
 | `set_spreadsheet_url` | Save the attorney's Google Sheet URL |
+| `disconnect_google` | Revoke Google OAuth and clear the saved spreadsheet reference |
+| `delete_account` | Permanently delete the attorney's account record from Protomated's database |
 | `log_time` | Append a time entry to the Time Tracker tab |
 | `mark_billed` | Mark all Unbilled entries for a client as Billed |
 | `mark_paid` | Mark all Billed entries for a client as Paid |

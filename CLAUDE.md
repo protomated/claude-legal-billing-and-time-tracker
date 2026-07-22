@@ -30,9 +30,11 @@ cowork-plugin/        The installable Cowork plugin (packed into legal-billing.z
 
 server/               HTTP MCP server — deployed to Dokploy
   index.js                    Express + MCP SDK (StreamableHTTPServerTransport)
-  auth.js                     Google OAuth2 flow for web context
+  auth.js                     Google OAuth2 flow for web context (attorney-facing, Sheets + Drive.file scope)
   db.js                       Postgres-backed session and token store
   sheets.js                   Google Sheets API operations (12 functions)
+  drive.js                    Provisions an attorney's billing sheet from the bundled template file
+  assets/legal-billing-template.xlsx   Master template, uploaded directly into each attorney's own Drive
   connect-google.html         OAuth success/error page served at /connect
   package.json                Server dependencies
 
@@ -84,12 +86,16 @@ Attorney installs legal-billing.zip → plugin connects to HTTP MCP server
          ↓
 Claude calls MCP tools (log_time, mark_billed, etc.)
          ↓
-HTTP MCP server (Dokploy) → Google Sheets API → attorney's own Google Sheet
+HTTP MCP server (Dokploy) → Google Sheets API → attorney's Google Sheet
+                                                   (auto-created from the template on first use, or connected manually)
 ```
 
-**OAuth:** `connect_google` returns a sign-in URL. The attorney opens it in their browser, authorizes Sheets access, and is redirected to `/oauth/callback`. Tokens are stored in Postgres keyed by Google `sub` (user ID). Sessions are in-memory — attorneys re-auth at the start of each new Claude conversation, which triggers Google's one-click flow if they are already signed in.
+**OAuth:** `connect_google` returns a sign-in URL. The attorney opens it in their browser, authorizes Sheets + Drive.file access, and is redirected to `/oauth/callback`. Tokens are stored in Postgres keyed by Google `sub` (user ID). Sessions are in-memory — attorneys re-auth at the start of each new Claude conversation, which triggers Google's one-click flow if they are already signed in. There is no fallback that binds a new session to an existing user without real OAuth — that was tried and removed as a cross-tenant auth risk.
 
-**Spreadsheet ID:** Saved per user via `set_spreadsheet_url` tool on first use.
+**Spreadsheet provisioning:** If an attorney has no sheet on file, the skill asks whether to create one from the template or connect an existing one.
+- New sheet: `create_billing_sheet` uploads the bundled `server/assets/legal-billing-template.xlsx` directly into the attorney's own Drive using their own OAuth credentials (`drive.js`), converting it to a native Google Sheet on upload. The attorney owns the file outright from creation — no copy-then-transfer step. (An earlier design copied the template from a Protomated-owned Google Sheet and tried to transfer ownership to the attorney; Google flatly rejects ownership transfer across organizations — `ownershipChangeAcrossDomainNotPermitted` — so that approach never actually worked. Don't reintroduce it.)
+- Existing sheet: `set_spreadsheet_url` tool saves whatever URL the attorney provides.
+Either way the resulting spreadsheet ID is saved per user.
 
 **Deployment:** `Dockerfile` + `docker-compose.yml` for Dokploy. `SERVER_URL` env var must be set to the public HTTPS URL (used to build the OAuth callback URI and the sign-in link returned to Claude).
 
@@ -98,7 +104,10 @@ HTTP MCP server (Dokploy) → Google Sheets API → attorney's own Google Sheet
 | Tool | Action |
 |---|---|
 | `connect_google` | Return a sign-in URL for Google OAuth; check connection status |
-| `set_spreadsheet_url` | Save the attorney's Google Sheet URL (first-time setup) |
+| `create_billing_sheet` | Create the attorney's sheet from the template and connect it (first-time setup; confirm before calling) |
+| `set_spreadsheet_url` | Save the attorney's existing Google Sheet URL (first-time setup) |
+| `disconnect_google` | Revoke Google OAuth and clear the saved spreadsheet reference (requires explicit confirmation before call) |
+| `delete_account` | Permanently delete the attorney's account record from Protomated's database (requires explicit confirmation before call) |
 | `log_time` | Append a time entry to the Time Tracker tab |
 | `mark_billed` | Mark all Unbilled entries for a client as Billed |
 | `mark_paid` | Mark all Billed entries as Paid (requires explicit confirmation before call) |
@@ -129,11 +138,9 @@ HTTP MCP server (Dokploy) → Google Sheets API → attorney's own Google Sheet
 
 2. **`SERVER_URL`** in `.env` — the public HTTPS URL of the deployed server (Dokploy domain)
 
-3. **`[TEMPLATE_SHEET_URL]`** in `cowork-plugin/README.md` (Step 1):
-   - Publish the Protomated Legal Billing Google Sheet template
-   - Replace the placeholder with the actual URL
+3. **`cowork-plugin/.mcp.json`** — update the URL from the ngrok testing URL to the production Dokploy URL
 
-4. **`cowork-plugin/.mcp.json`** — update the URL from the ngrok testing URL to the production Dokploy URL
+4. To update the master template, replace `server/assets/legal-billing-template.xlsx` (export the canonical Google Sheet as `.xlsx` via File → Download) — no other config needed.
 
 ## Compliance constraints — non-negotiable
 
@@ -144,6 +151,9 @@ Enforced in `server/index.js` tool descriptions and `cowork-plugin/skills/legal-
 3. **No legal advice**: Decline any request outside billing and time tracking.
 4. **markPaid confirmation gate**: State what will change, wait for explicit confirmation, then call `mark_paid`.
 5. **No undo**: Direct attorney to correct the row in their Google Sheet.
+6. **createBillingSheet confirmation gate**: Never call `create_billing_sheet` without the attorney explicitly choosing to create a new sheet over connecting an existing one.
+7. **disconnectGoogle confirmation gate**: State that it clears the Google connection and saved sheet reference, wait for explicit confirmation, then call `disconnect_google`.
+8. **deleteAccount confirmation gate**: State exactly what will be deleted and that it's irreversible, wait for explicit confirmation, then call `delete_account`.
 
 ## Commit style
 

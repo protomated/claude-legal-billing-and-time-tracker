@@ -18,6 +18,7 @@ export async function initDb() {
       updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE users DROP COLUMN IF EXISTS owner_transfer_pending`);
 }
 
 export async function getUser(sub) {
@@ -30,6 +31,18 @@ export async function getUser(sub) {
     [sub]
   );
   return res.rows[0] ?? null;
+}
+
+export async function disconnectUser(sub) {
+  await pool.query(
+    `UPDATE users SET tokens = NULL, spreadsheet_url = NULL, spreadsheet_id = NULL,
+     updated_at = NOW() WHERE sub = $1`,
+    [sub]
+  );
+}
+
+export async function deleteUser(sub) {
+  await pool.query(`DELETE FROM users WHERE sub = $1`, [sub]);
 }
 
 export async function saveUser(sub, patch) {
@@ -50,13 +63,4 @@ export async function saveUser(sub, patch) {
       patch.spreadsheetId  ?? null,
     ]
   );
-}
-
-// Returns the sub of the only user with saved tokens.
-// Returns null if there are zero or more than one (can't auto-pick safely).
-export async function findSingleUser() {
-  const res = await pool.query(
-    `SELECT sub FROM users WHERE tokens IS NOT NULL LIMIT 2`
-  );
-  return res.rows.length === 1 ? res.rows[0].sub : null;
 }
