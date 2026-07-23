@@ -5,8 +5,7 @@ WORKDIR /app
 COPY server/package.json ./server/
 RUN npm install --prefix server --production
 
-# Copy source — server imports sheets.js from plugin/server/
-COPY plugin/server/sheets.js ./plugin/server/sheets.js
+# Copy source (node_modules excluded via .dockerignore — installed above instead)
 COPY server/ ./server/
 
 ENV NODE_ENV=production
