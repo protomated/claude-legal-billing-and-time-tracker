@@ -2,7 +2,7 @@
   "mcpServers": {
     "legal-billing": {
       "type": "http",
-      "url": "https://chatty-ducky-vantage.ngrok-free.dev/mcp"
+      "url": "https://billing-mcp.protomated.com/mcp"
     }
   }
 }

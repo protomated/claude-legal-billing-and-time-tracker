@@ -66,3 +66,5 @@ jobs:
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
         run: bash .github/scripts/dokploy-deploy.sh
+
+
