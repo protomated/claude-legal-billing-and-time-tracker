@@ -41,11 +41,19 @@
     text-decoration: none; transition: background .15s, box-shadow .15s;
   }
   .btn:hover { background: #f8f9fa; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
-  .footer-note {
-    text-align: center; font-size: 11px; color: var(--muted); margin-top: 16px;
+  .permissions {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; margin-top: 16px;
   }
-  .footer-note a { color: var(--muted); }
-  .footer-note a:hover { color: var(--text); }
+  .permissions-title { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .permission-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .permission-row:last-child { margin-bottom: 0; }
+  .perm-icon { flex-shrink: 0; margin-top: 1px; }
+  .policy-line {
+    text-align: center; font-size: 11px; color: var(--muted); margin-top: 14px; line-height: 1.5;
+  }
+  .policy-line a { color: #6366f1; }
+  .policy-line a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -71,8 +79,28 @@
     </svg>
     Sign in with Google
   </a>
-  <p class="footer-note">
-    <a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp; <a href="/terms">Terms of Service</a>
+
+  <div class="permissions">
+    <div class="permissions-title">Permissions requested</div>
+    <div class="permission-row">
+      <span class="perm-icon">📋</span>
+      <span><strong style="color:#c9c9e0">Google Sheets</strong> — read &amp; write your billing spreadsheet</span>
+    </div>
+    <div class="permission-row">
+      <span class="perm-icon">📁</span>
+      <span><strong style="color:#c9c9e0">Google Drive</strong> — create your billing sheet on first use (app-created files only)</span>
+    </div>
+    <div class="permission-row">
+      <span class="perm-icon">👤</span>
+      <span><strong style="color:#c9c9e0">Profile &amp; email</strong> — identify your account. Never used for marketing.</span>
+    </div>
+  </div>
+
+  <p class="policy-line">
+    By signing in you agree to Protomated's
+    <a href="/privacy" target="_blank">Privacy Policy</a> and
+    <a href="/terms" target="_blank">Terms of Service</a>.
+    Your data stays in your own Google Drive.
   </p>
 </div>
 </body>
