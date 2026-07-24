@@ -42,6 +42,13 @@ function notConnectedResponse(sessionId) {
 // flow (no password re-entry if already logged in).
 const sessions = new Map(); // sessionId → sub
 
+// Per-process boot ID — diagnostic only. If /health returns a different
+// value across consecutive requests, more than one instance of this process
+// is serving traffic, which breaks the in-memory session model above (an
+// OAuth callback landing on one instance is invisible to a tool call landing
+// on another).
+const INSTANCE_ID = `${process.pid}-${randomUUID().slice(0, 8)}`;
+
 // ── Tool definitions ─────────────────────────────────────────────────────────
 
 const TOOLS = [
@@ -629,7 +636,7 @@ app.get('/oauth/callback', async (req, res) => {
   }
 });
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0', instance: INSTANCE_ID }));
 
 await initDb();
 
