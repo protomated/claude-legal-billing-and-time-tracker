@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<%- include('partials/head', { title: 'Privacy Policy' }) %>
+</head>
+<body>
+<%- include('partials/nav') %>
+<main>
+  <h1>Privacy Policy</h1>
+  <p class="page-meta">Last updated: July 24, 2026 &nbsp;·&nbsp; Legal Billing &amp; Time Tracker by Protomated</p>
+
+  <p>
+    This Privacy Policy describes how Protomated ("<strong style="color:var(--text)">we</strong>,"
+    "<strong style="color:var(--text)">our</strong>," or "<strong style="color:var(--text)">us</strong>")
+    collects, uses, and protects information when you use the Legal Billing &amp; Time Tracker plugin
+    ("the Service"). The Service connects Claude Cowork to your Google Sheets account so you can
+    manage billable hours, invoices, and trust account records by chat.
+  </p>
+
+  <hr>
+
+  <h2>1. Google API data we access</h2>
+  <p>
+    When you connect your Google account, the Service requests the following OAuth scopes. We use
+    each scope only for the purpose listed — no broader processing.
+  </p>
+  <ul>
+    <li>
+      <code>https://www.googleapis.com/auth/spreadsheets</code> —
+      Read and write billing data (time entries, trust records, invoice status) to the Google Sheet
+      you designated as your billing sheet. We do not read any other spreadsheet.
+    </li>
+    <li>
+      <code>https://www.googleapis.com/auth/drive.file</code> —
+      Create a new billing spreadsheet in your Google Drive from our template, if you choose to
+      create one during setup. We access only files created by the Service.
+    </li>
+    <li>
+      <code>openid</code>, <code>email</code>, <code>profile</code> —
+      Identify you so we can link your Google account to your billing sheet configuration.
+      We store your email address to confirm identity; we do not use it for marketing.
+    </li>
+  </ul>
+
+  <h2>2. Google API Limited Use disclosure</h2>
+  <p>
+    Our use of information received from Google APIs will adhere to the
+    <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">
+      Google API Services User Data Policy
+    </a>, including the Limited Use requirements. Specifically:
+  </p>
+  <ul>
+    <li>We use Google user data only to provide and improve the Legal Billing service.</li>
+    <li>We do not use Google user data to serve advertisements.</li>
+    <li>We do not allow humans to read your Google user data unless you explicitly request support,
+        a security investigation requires it, or we are required by law.</li>
+    <li>We do not sell, transfer, or share your Google user data with third parties, except as
+        necessary to provide the Service (e.g., our hosted database) or as required by law.</li>
+  </ul>
+
+  <hr>
+
+  <h2>3. What we store</h2>
+  <p>
+    When you authenticate, we store the following in our private PostgreSQL database, keyed by
+    your Google user ID (<code>sub</code>):
+  </p>
+  <ul>
+    <li>Your Google OAuth2 access token and refresh token (encrypted at rest)</li>
+    <li>Your Google email address</li>
+    <li>The URL and ID of your designated billing spreadsheet</li>
+  </ul>
+  <p>
+    <strong style="color:var(--text)">Your billing data itself lives in your Google Sheet —
+    not on our servers.</strong> We never copy time entries, invoice records, or trust account
+    data into our database. All reads and writes go directly from our server to your Google
+    Sheet on your behalf, in real time.
+  </p>
+
+  <hr>
+
+  <h2>4. Data sharing</h2>
+  <p>
+    We do not sell or rent your data. We do not share your information with third parties except:
+  </p>
+  <ul>
+    <li><strong style="color:var(--text)">Infrastructure providers</strong> — our hosted database
+        and server (Dokploy) to store tokens and serve the Service.</li>
+    <li><strong style="color:var(--text)">Legal obligation</strong> — if required by law or
+        a valid court order.</li>
+  </ul>
+
+  <hr>
+
+  <h2>5. Data retention and deletion</h2>
+  <p>You can remove your data at any time directly from Claude:</p>
+  <ul>
+    <li>
+      <strong style="color:var(--text)">Disconnect Google</strong> — say "disconnect Google" in
+      Claude. This revokes our OAuth token and clears your sheet reference from our database.
+      Your Google Sheet and its data are untouched.
+    </li>
+    <li>
+      <strong style="color:var(--text)">Delete account</strong> — say "delete my account" in
+      Claude. This permanently removes your tokens, email, and sheet reference from our database.
+      Again, your Google Sheet is not modified or deleted.
+    </li>
+  </ul>
+  <p>
+    We retain data only for as long as you have an active account. After deletion, data is
+    removed from our database within 30 days.
+  </p>
+
+  <hr>
+
+  <h2>6. Security</h2>
+  <p>
+    OAuth tokens are stored encrypted. Our server communicates with Google APIs over HTTPS.
+    Sessions are in-memory and expire when you close your Claude conversation — you re-authenticate
+    at the start of each new session via Google's one-click flow.
+  </p>
+
+  <hr>
+
+  <h2>7. Children's privacy</h2>
+  <p>
+    The Service is intended for attorneys and legal professionals. We do not knowingly collect
+    data from individuals under the age of 18.
+  </p>
+
+  <hr>
+
+  <h2>8. Changes to this policy</h2>
+  <p>
+    We may update this policy from time to time. Material changes will be reflected by updating
+    the "Last updated" date at the top of this page. Continued use of the Service after changes
+    constitutes acceptance of the revised policy.
+  </p>
+
+  <hr>
+
+  <h2>9. Contact</h2>
+  <p>
+    Questions or requests regarding this Privacy Policy:
+    <a href="mailto:dele@protomated.com">dele@protomated.com</a>
+  </p>
+  <p>
+    Protomated &nbsp;·&nbsp;
+    <a href="https://protomated.com">protomated.com</a>
+  </p>
+</main>
+<%- include('partials/footer') %>
+</body>
+</html>
