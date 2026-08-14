@@ -38,6 +38,14 @@ server/               HTTP MCP server — deployed to Dokploy
   connect-google.html         OAuth success/error page served at /connect
   package.json                Server dependencies
 
+.github/
+  workflows/dokploy-deploy.yml   CI: build server image + deploy to Dokploy on push to main
+  workflows/release.yml          CI: publish legal-billing.zip to a GitHub release on v* tag push
+  scripts/release.sh             Shared release logic (used by npm run release / release:ci)
+  scripts/dokploy-deploy.sh      Dokploy deploy trigger
+
+RELEASE.md            GitHub release notes (used by release.sh via --notes-file; keep current per release)
+
 Dockerfile            Container build
 docker-compose.yml    Local container stack (server + postgres)
 .env.example          Required env vars template
@@ -60,6 +68,14 @@ npm run start
 
 # Build the Cowork plugin ZIP (output: legal-billing.zip)
 npm run pack
+
+# Build the ZIP and publish it as a GitHub release asset (tag v<package.json version>,
+# notes from RELEASE.md; replaces the asset if the release exists). Local use — needs `gh auth login`.
+npm run release
+
+# Same, for GitHub Actions (auth via GH_TOKEN). Runs automatically on v* tag push
+# or manual dispatch via .github/workflows/release.yml.
+npm run release:ci
 
 # Remove build artifacts
 npm run clean

@@ -1,13 +1,14 @@
-# Legal Billing and Time Tracker v1.0.0
+# Legal Billing and Time Tracker
 
-Initial release.
+Free Claude Cowork plugin for solo and small-firm attorneys, by
+[Protomated](https://protomated.com).
 
 ## What's included
 
-### `legal-billing.mcpb` — Legal Billing and Time Tracker
+### `legal-billing.zip` — Legal Billing and Time Tracker
 
 Log billable hours, generate invoices, manage trust account deposits and
-withdrawals, and monitor revenue — by chatting naturally in Claude Desktop.
+withdrawals, and monitor revenue — by chatting naturally in Claude Cowork.
 Your data lives in your own Google Sheet. No monthly subscription, no relay,
 no shared credentials.
 
@@ -21,14 +22,17 @@ no shared credentials.
 
 ## Setup
 
-Install time: ~3 minutes.
+Install time: ~2 minutes.
 
-1. Copy the Legal Billing template to your Google Drive (File → Make a copy)
-2. Install `legal-billing.mcpb` in Claude Desktop → Extensions → Add
-3. When prompted, paste your sheet URL
-4. In a new chat, say "connect Google" — a browser tab opens for one-time sign-in
+1. Download `legal-billing.zip` from this release
+2. In Claude Cowork: sidebar → **Plugins → Add** → upload the ZIP
+3. In a chat, say "connect Google" — a browser tab opens for sign-in
+4. Claude offers to create your billing sheet automatically from the template,
+   built directly in your own Google Drive — or paste the URL of an existing
+   sheet instead
 
-No relay. No service account. No shared credentials.
+No relay. No service account. No shared credentials. The sheet is yours from
+the moment it's created.
 
 ## Compliance
 

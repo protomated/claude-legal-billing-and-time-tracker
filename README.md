@@ -10,7 +10,7 @@ Distributed free by [Protomated](https://protomated.com).
 
 1. Download `legal-billing.zip` from [Releases](https://github.com/protomated/claude-legal-billing-and-time-tracker/releases)
 2. In Claude Cowork: sidebar → **Plugins → Add** → upload the ZIP
-3. On first use, Claude will walk you through connecting your Google account and pasting your sheet URL (~2 minutes)
+3. On first use, Claude will walk you through connecting your Google account, then offer to create your billing sheet automatically from the template — or connect an existing sheet by pasting its URL (~2 minutes)
 
 See [`cowork-plugin/README.md`](cowork-plugin/README.md) for the full attorney setup guide.
 
@@ -31,7 +31,15 @@ server/               HTTP MCP server (deployed to Dokploy)
   auth.js             Google OAuth for web context
   db.js               Postgres session/token store
   sheets.js           Google Sheets API (12 operations)
+  drive.js            Provisions the attorney's sheet from the bundled template
+  assets/legal-billing-template.xlsx   Master template
+  connect-google.html OAuth success/error page
   package.json
+
+.github/
+  workflows/dokploy-deploy.yml   Build & deploy the server on push to main
+  workflows/release.yml          Publish legal-billing.zip on version tags
+  scripts/                       Deploy and release scripts
 
 Dockerfile
 docker-compose.yml
@@ -45,7 +53,10 @@ docker-compose.yml
 | Tool | What it does |
 |---|---|
 | `connect_google` | Return a Google sign-in URL; check connection status |
-| `set_spreadsheet_url` | Save the attorney's sheet URL (one-time setup) |
+| `create_billing_sheet` | Create the attorney's sheet from the template and connect it (first-time setup) |
+| `set_spreadsheet_url` | Save the attorney's existing sheet URL (first-time setup) |
+| `disconnect_google` | Revoke Google OAuth and clear the saved sheet reference (confirmation required) |
+| `delete_account` | Permanently delete the attorney's account record (confirmation required) |
 | `log_time` | Append a billable time entry |
 | `mark_billed` | Mark all Unbilled entries for a client as Billed |
 | `mark_paid` | Mark all Billed entries as Paid (confirmation required) |
@@ -95,6 +106,21 @@ npm run pack    # outputs legal-billing.zip
 
 Upload `legal-billing.zip` in Cowork to test end-to-end.
 
+### Release the plugin ZIP to GitHub
+
+```bash
+npm run release   # builds legal-billing.zip and publishes it as a GitHub release asset
+```
+
+The release is tagged `v<package.json version>` (the tag is created on GitHub if it doesn't exist), with `RELEASE.md` as the release notes. If the release already exists, the ZIP asset is replaced. Requires the [GitHub CLI](https://cli.github.com/) (`gh auth login`).
+
+Releases also run automatically in CI: pushing a `v*` tag (or manually dispatching the **Release Plugin** workflow) runs `npm run release:ci` via `.github/workflows/release.yml`.
+
+```bash
+# Typical flow: bump version in package.json, then
+git tag v1.1.0 && git push origin v1.1.0
+```
+
 ---
 
 ## Deployment
@@ -123,6 +149,8 @@ Non-negotiable constraints enforced in `server/index.js` and `cowork-plugin/skil
 3. Decline anything outside billing and time tracking.
 4. `mark_paid` requires explicit attorney confirmation before the tool is called.
 5. No undo — attorney corrects errors directly in the sheet.
+6. `create_billing_sheet` is never called unless the attorney explicitly chooses a new sheet over connecting an existing one.
+7. `disconnect_google` and `delete_account` each require explicit confirmation after stating exactly what will be removed.
 
 Do not weaken these constraints.
 

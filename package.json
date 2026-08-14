@@ -1,12 +1,14 @@
 {
   "name": "legal-billing-time-tracker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Legal Billing and Time Tracker — Claude Cowork plugin for solo attorneys to track time, generate invoices, and manage trust accounts via natural conversation",
   "private": true,
   "scripts": {
     "install:server": "npm install --prefix server --production --silent",
     "start": "npm run install:server && node server/index.js",
-    "pack": "rm -f ./legal-billing.zip && (cd cowork-plugin && zip -r ../legal-billing.zip . -x '*.DS_Store') && echo \"Built legal-billing.zip ($(du -sh ../legal-billing.zip | cut -f1))\"",
+    "pack": "rm -f ./legal-billing.zip && (cd cowork-plugin && zip -r ../legal-billing.zip . -x '*.DS_Store') && echo \"Built legal-billing.zip ($(du -sh ./legal-billing.zip | cut -f1))\"",
+    "release": "bash .github/scripts/release.sh",
+    "release:ci": "bash .github/scripts/release.sh",
     "clean": "rm -f ./*.zip"
   }
 }
