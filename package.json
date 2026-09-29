@@ -1,6 +1,6 @@
 {
   "name": "legal-billing-time-tracker",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Legal Billing and Time Tracker — Claude Cowork plugin for solo attorneys to track time, generate invoices, and manage trust accounts via natural conversation",
   "private": true,
   "scripts": {
