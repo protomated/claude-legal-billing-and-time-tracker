@@ -628,7 +628,7 @@ app.get('/oauth/callback', async (req, res) => {
 <div>
   <div style="font-size:48px">✅</div>
   <h2 style="color:#166534;margin:12px 0 6px">Connected as ${email}</h2>
-  <p style="color:#15803d">Close this tab and return to Claude.</p>
+  <p style="color:#15803d">Close this tab and return to the app.</p>
 </div>
 </body></html>`);
   } catch (e) {
